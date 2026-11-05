@@ -123,6 +123,24 @@
     return { pl: pl, bs: bs, tb: totals(rows) };
   }
 
+  /* journal lines of the App's capital and loan forms (finrep.js): kind capin | drw | loanin | loanout | givenin | givenout,
+     o = { name, amt, int (interest, loanout / givenin), mode (money account 'cash' | 'bank'), lk (account of the loan for loanout /
+     givenin), lt ('loan' long term | 'od' short term, loanin) }. Interest paid goes to the finance cost 'Interest on loan',
+     interest received to other income 'Interest received'. Lines with nothing on either side are left out. */
+  function capLoanLines(kind, o) {
+    var amt = r2(num(o.amt)), int = r2(num(o.int)), name = String(o.name || '').trim(), M = o.mode === 'bank' ? 'bank' : 'cash', lines;
+    function m(dr, cr) { return { t: M, a: M, dr: r2(dr), cr: r2(cr) }; }
+    if (kind === 'capin') lines = [m(amt, 0), { t: 'cap', nm: name || 'Capital', a: 'cap:' + key(name || 'Capital'), dr: 0, cr: amt }];
+    else if (kind === 'drw') lines = [{ t: 'drw', nm: name || 'Drawings', a: 'drw:' + key(name || 'Drawings'), dr: amt, cr: 0 }, m(0, amt)];
+    else if (kind === 'loanin') lines = [m(amt, 0), { t: 'loan', nm: name, a: (o.lt === 'od' ? 'od:' : 'loan:') + key(name), dr: 0, cr: amt }];
+    else if (kind === 'givenout') lines = [{ t: 'given', nm: name, a: 'given:' + key(name), dr: amt, cr: 0 }, m(0, amt)];
+    else if (kind === 'loanout') lines = [{ t: 'loan', nm: name, a: o.lk, dr: amt, cr: 0 }, { t: 'exp', nm: 'Interest on loan', a: 'exp:interest on loan', dr: int, cr: 0 }, m(0, amt + int)];
+    else if (kind === 'givenin') lines = [m(amt + int, 0), { t: 'given', nm: name, a: o.lk, dr: 0, cr: amt }, { t: 'inc', nm: 'Interest received', a: 'inc:interest received', dr: 0, cr: int }];
+    else return [];
+    return lines.filter(function (l) { return l.dr || l.cr; });
+  }
+
   var API = { ORDER: ORDER, SIDE: SIDE, headOf: headOf, fromBooks: fromBooks, totals: totals, statements: statements, openStock: openStock, prevDay: prevDay, num: num, r2: r2 };
+  API.capLoanLines = capLoanLines;   /* capital and loans (finrep.js) */
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else G.NSPL = API;
 })(typeof window !== 'undefined' ? window : this);
