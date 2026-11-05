@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://profit-loss.niveshsahayak.in/sitemap.xml
