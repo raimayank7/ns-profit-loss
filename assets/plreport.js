@@ -85,6 +85,7 @@
     var typedCash = W.typed.some(function (r) { return r.g === 'cash'; });
     if (!typedCash) C.rows.forEach(function (r) { if ((r.k === 'cash' || r.k === 'bank') && r.cr) warn += '<p class="sb-note bad">' + esc(t('pl.w_neg', { a: nm(r) })) + '</p>'; });
     if (W.src === 'books' && !C.rows.some(function (r) { return r.g === 'rev'; })) warn += '<p class="sb-note">' + esc(t('pl.w_nosales')) + '</p>';
+    if (W.src === 'books' && cur !== 'bs') warn += '<p class="hint">' + esc(t('uf.pfpl')) + '</p>';   /* why the App's Profit report can show another figure */
     var body = cur === 'bs' ? bsHtml(C) : cur === 'tb' ? tbHtml(C) : plHtml(C);
     return head + setup + tiles + warn + body +
       '<div class="btns"><button type="button" class="btn primary" data-save>' + esc(t('sb.save')) + '</button><button type="button" class="btn" data-print>' + esc(t('sb.print')) + '</button><button type="button" class="btn" data-pdf>' + esc(t('sb.pdf')) + '</button><button type="button" class="btn" data-csv>' + esc(t('sb.csv')) + '</button>' +
