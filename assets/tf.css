@@ -1,0 +1,29 @@
+/* T format (horizontal) final accounts (tfview.js): Dr / Liabilities left, Cr / Assets right; the two sides stack on narrow screens */
+.tf-fmt{margin-top:8px}
+.tf-t th,.tf-t td{font-weight:400}
+.tf-t thead th{font-weight:700}
+.tf-t th.tf-side{font-size:.95rem;text-align:center}
+.tf-t td.n{white-space:nowrap}
+.tf-t td.i{color:var(--soft);font-size:.92em}
+.tf-t th.sub{padding-inline-start:1.6em}
+.tf-t tr.sec th{background:var(--surface2,#eef2f6);font-weight:700;font-size:.82rem;letter-spacing:.02em}
+.tf-t tr.tot th,.tf-t tr.tot td{font-weight:700;border-top:2px solid var(--line,#999);border-bottom:2px solid var(--line,#999)}
+.tf-w td:nth-child(3),.tf-w tr.tot td:nth-child(3){border-inline-end:2px solid var(--line,#999)}
+.tf-w thead th:first-child{border-inline-end:2px solid var(--line,#999)}
+.tf-w thead tr+tr th:nth-child(2){border-inline-end:2px solid var(--line,#999)}
+.tf-t tr.a-bad th,.tf-t tr.a-bad td{color:var(--bad,#b00)}
+.tf-t tr.a-h th{font-weight:600}
+.tf-box .tf-n{display:none}
+.tf-box .tf-n+.tf-n{margin-top:14px}
+@media (max-width:760px){
+.tf-box .tf-w{display:none}
+.tf-box .tf-n{display:table;width:100%}
+}
+.stsheet .tf-t{width:100%;font-size:.84rem}
+.stsheet .tf-t th,.stsheet .tf-t td{padding:4px 6px;border-color:#ccc;color:#111}
+.stsheet .tf-t tr.sec th{background:#eef2f6}
+.stsheet .tf-t td.i{color:#444}
+@media print{
+.tf-box .tf-w{display:table!important}
+.tf-box .tf-n{display:none!important}
+}

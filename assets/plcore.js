@@ -91,12 +91,16 @@
     var openAll = openStock(docs, biz, '', to), openIn = openStock(docs, biz, from, to);
     var os = opt.os != null ? r2(num(opt.os)) : r2((from && S ? S.summary(docs, items, biz, '', prevDay(from)).value : 0) + openIn);
     var cs = opt.cs != null ? r2(num(opt.cs)) : S ? S.summary(docs, items, biz, '', to).value : 0;
-    if (os) rows.push(line('osk', 'Opening stock', 'osk', os, 'stock'));
+    /* work in progress (manufacturing, typed in the App: facore.js / famore.js): opening WIP joins the opening stock (it was profit
+       of earlier periods), closing WIP joins the closing stock (inventories) */
+    var wo = r2(num(opt.wipOpen)), wc = r2(num(opt.wipClose));
+    if (wo || wc) { os = r2(os + wo); cs = r2(cs + wc); }
+    if (os) rows.push(line('osk', wo ? 'Opening stock (with work in progress)' : 'Opening stock', 'osk', os, 'stock'));
     if (openAll) rows.push(line('cap-stock', 'Stock brought in (opening stock records)', 'cap', -openAll, 'stock'));
     var earlier = r2(plBefore - os + openAll);
     if (earlier) rows.push(line('res-earlier', earlier < 0 ? 'Profit of earlier periods' : 'Loss of earlier periods', 'res', earlier));
     rows.sort(function (p, q) { return ORDER.indexOf(p.g) - ORDER.indexOf(q.g) || p.name.localeCompare(q.name); });
-    return { rows: rows, os: os, cs: cs };
+    return { rows: rows, os: os, cs: cs, wipOpen: wo, wipClose: wc };
   }
 
   function totals(rows) {
@@ -140,7 +144,132 @@
     return lines.filter(function (l) { return l.dr || l.cr; });
   }
 
+  /* ---------- Trial balance styles (finrep.js) ----------
+     tbDetail: the trial balance with opening balance (day before the period), the period's debits and credits and the closing
+     balance of every account, like Tally's detailed trial balance. Each line: { k, name, g, od, oc (opening), td, tc
+     (transactions), dr, cr (closing, the same figures fromBooks gives) } and opening + td − tc = closing on every line.
+     Profit and loss accounts open at nil (earlier years sit in 'res-earlier'); stock brought in during the period with an
+     opening stock record is a transaction of opening stock (debit) and of 'cap-stock' (credit), so every column pair agrees.
+     Accounts that end at nil but moved in the period are listed too. opt.each: one line per customer / supplier ('p:<key>').
+     stockOff: the lines without opening stock and stock brought in (their net folded into earlier periods): ledgers only.
+     tbGroups: one line per Tally-like group. tbTotals: the six column totals. prevYear: the same dates one year earlier. */
+  function pair(v) { v = r2(v); return v > 0 ? [v, 0] : [0, v < 0 ? -v : 0]; }
+  function setPair(o, f, v) { var p = pair(v); o[f[0]] = p[0]; o[f[1]] = p[1]; return o; }
+  function moves(docs, biz, from, to) {
+    var m = {};
+    B.inBooks(docs, biz).forEach(function (d) {
+      if (from && d.date < from || to && d.date > to) return;
+      B.postings(d).forEach(function (l) { var x = m[l.a] = m[l.a] || { dr: 0, cr: 0 }; x.dr = r2(x.dr + l.dr); x.cr = r2(x.cr + l.cr); });
+    });
+    return m;
+  }
+  function tbDetail(docs, items, biz, from, to, opt) {
+    opt = opt || {};
+    var base = fromBooks(docs, items, biz, from, to, opt), before = from ? B.accounts(docs, biz, prevDay(from)) : {}, upto = B.accounts(docs, biz, to);
+    var M = moves(docs, biz, from, to), openIn = openStock(docs, biz, from, to), rows = [], done = {}, agg = {};
+    function mv(a) { return M[a] || { dr: 0, cr: 0 }; }
+    function add(row, open, td, tc) { var o = Object.assign({}, row); setPair(o, ['od', 'oc'], open); o.td = r2(td); o.tc = r2(tc); setPair(o, ['dr', 'cr'], r2(open + td - tc)); rows.push(o); return o; }
+    /* parties and GST: summed (or one line per party), grouped by the closing balance, else the opening one */
+    Object.keys(upto).concat(Object.keys(before), Object.keys(M)).forEach(function (a) {
+      if (done[a]) return; done[a] = 1;
+      var u = upto[a] || 0, b0 = before[a] || 0, x = mv(a), g;
+      if (!r2(u) && !r2(b0) && !x.dr && !x.cr) return;
+      if (a.indexOf('p:') === 0) {
+        g = u > 0 || !r2(u) && (b0 > 0 || !r2(b0) && x.dr >= x.cr) ? 'trec' : 'tpay';
+        if (opt.each) { add({ k: a, name: a.slice(2), g: g, src: 'books' }, b0, x.dr, x.cr); return; }
+      } else if (/^gst-/.test(a)) g = 'gst';
+      else if (isPL(a)) {
+        var hit = base.rows.filter(function (r) { return r.k === a; })[0];
+        if (hit) add(hit, 0, x.dr, x.cr);
+        else if (x.dr || x.cr) add(line(a, a.indexOf('exp:') === 0 ? cap1(a.slice(4)) : a.indexOf('inc:') === 0 ? cap1(a.slice(4)) : NAMES[a] ? NAMES[a][0] : a, a.indexOf('inc:') === 0 ? 'oinc' : a.indexOf('exp:') === 0 ? 'oth' : NAMES[a] ? NAMES[a][1] : 'oth', 0), 0, x.dr, x.cr);
+        return;
+      } else {
+        var h = base.rows.filter(function (r) { return r.k === a; })[0], px = Object.keys(PREFIX).filter(function (p) { return a.indexOf(p) === 0; })[0];
+        h = h || line(a, px ? cap1(a.slice(px.length)) : NAMES[a] ? NAMES[a][0] : a, px ? PREFIX[px] : NAMES[a] ? NAMES[a][1] : b0 >= 0 ? 'oca' : 'ocl', 0);
+        add(h, b0, x.dr, x.cr); return;
+      }
+      var s = agg[g] = agg[g] || { o: 0, td: 0, tc: 0, n: 0 }; s.o += b0; s.td += x.dr; s.tc += x.cr; if (r2(u)) s.n++;
+    });
+    Object.keys(agg).forEach(function (g) {
+      var s = agg[g], hit = base.rows.filter(function (r) { return r.k === g; })[0];
+      var row = hit || (g === 'gst' ? line('gst', 'GST (net)', 'oca', 0) : line(g, g === 'trec' ? 'Trade receivables (customers who owe you)' : 'Trade payables (suppliers you owe)', g, 0));
+      var o = add(row, s.o, s.td, s.tc); o.n = hit ? hit.n : s.n;
+    });
+    /* stock and earlier periods: as fromBooks made them, with stock brought in during the period as a transaction pair */
+    base.rows.forEach(function (r) {
+      if (r.k === 'osk') add(r, opt.os != null ? r.dr : r.dr - openIn, opt.os != null ? 0 : openIn, 0);
+      else if (r.k === 'cap-stock') add(r, opt.os != null ? -r.cr : -(r.cr - openIn), 0, opt.os != null ? 0 : openIn);
+      else if (r.k === 'res-earlier') add(r, r.dr - r.cr, 0, 0);
+    });
+    rows.sort(function (p, q) { return ORDER.indexOf(p.g) - ORDER.indexOf(q.g) || String(p.name).localeCompare(String(q.name)); });
+    return { rows: rows, os: base.os, cs: base.cs };
+  }
+  /* without stock lines: opening stock and stock brought in leave, their net goes to profit / loss of earlier periods */
+  var PAIRS = [['od', 'oc'], ['td', 'tc'], ['dr', 'cr']];
+  function stockOff(rows) {
+    var out = [], net = {}, er = null, det = rows.some(function (r) { return r.td != null; });
+    PAIRS.forEach(function (p) { net[p[0]] = 0; });
+    rows.forEach(function (r) {
+      if (r.k === 'osk' || r.k === 'cap-stock') { PAIRS.forEach(function (p) { net[p[0]] += num(r[p[0]]) - num(r[p[1]]); }); return; }
+      var o = Object.assign({}, r); if (r.k === 'res-earlier') er = o; out.push(o);
+    });
+    if (!r2(net.od) && !r2(net.td) && !r2(net.dr)) return out;
+    if (!er) { er = { k: 'res-earlier', g: 'res', src: 'books' }; out.push(er); }
+    PAIRS.forEach(function (p) { if (det || p[0] === 'dr') setPair(er, p, num(er[p[0]]) - num(er[p[1]]) + net[p[0]]); });
+    er.name = er.cr ? 'Profit of earlier periods' : 'Loss of earlier periods';
+    if (!er.dr && !er.cr && !er.od && !er.oc && !er.td && !er.tc) out.splice(out.indexOf(er), 1);
+    return out.sort(function (p, q) { return ORDER.indexOf(p.g) - ORDER.indexOf(q.g); });
+  }
+  /* Tally-like groups in the order they print, with their English names */
+  var TBG = [['gcap', 'Capital account'], ['gres', 'Reserves and surplus (profit and loss account)'], ['gloan', 'Loans (liability)'], ['gcred', 'Sundry creditors'], ['gtax', 'Duties and taxes'], ['gcl', 'Current liabilities'],
+    ['gfa', 'Fixed assets'], ['ginv', 'Investments'], ['gdeb', 'Sundry debtors'], ['gcash', 'Cash-in-hand'], ['gbank', 'Bank accounts'], ['gadv', 'Loans and advances (asset)'], ['gosk', 'Opening stock'],
+    ['gsales', 'Sales accounts'], ['gpur', 'Purchase accounts'], ['gdir', 'Direct expenses'], ['gind', 'Indirect expenses'], ['ginc', 'Indirect incomes']];
+  /* direct expenses: costs of getting goods in or making them; the rest (rent, electricity, salary, transport) are indirect */
+  var DIRECT = /(^|\s)(wages?|freight in\w*|carriage in\w*|cartage|loading|unloading|packing|factory|manufactur\w*|job work|customs|import duty|power and fuel)(\s|$)/;
+  function tbGroupOf(r) {
+    var g = r.g, k = r.k || '';
+    if (g === 'cap' || g === 'drw') return 'gcap';
+    if (g === 'res') return 'gres';
+    if (g === 'ltb' || g === 'stb') return 'gloan';
+    if (g === 'tpay') return 'gcred';
+    if (k === 'gst' || /^gst-/.test(k) || k === 'tds-payable') return g === 'oca' && k !== 'gst' ? 'gadv' : 'gtax';
+    if (g === 'ocl') return 'gcl';
+    if (g === 'ppe') return 'gfa';
+    if (g === 'ninv') return 'ginv';
+    if (g === 'trec') return 'gdeb';
+    if (g === 'cash') return k === 'bank' ? 'gbank' : 'gcash';
+    if (g === 'oca') return 'gadv';
+    if (g === 'osk') return 'gosk';
+    if (g === 'rev') return 'gsales';
+    if (g === 'pur' || g === 'mat') return 'gpur';
+    if (g === 'oinc') return 'ginc';
+    if (typeof API.isDirect === 'function') return API.isDirect(r) ? 'gdir' : 'gind';   /* when the books know direct expenses, follow them */
+    return DIRECT.test(key(r.name)) && !/salar/.test(key(r.name)) ? 'gdir' : 'gind';
+  }
+  function tbGroups(rows) {
+    var s = {};
+    rows.forEach(function (r) {
+      var id = tbGroupOf(r), x = s[id] = s[id] || { k: 'grp:' + id, grp: id, o: 0, td: 0, tc: 0, c: 0, n: 0 };
+      x.o += num(r.od) - num(r.oc); x.td += num(r.td); x.tc += num(r.tc); x.c += num(r.dr) - num(r.cr); x.n++;
+    });
+    return TBG.filter(function (g) { return s[g[0]]; }).map(function (g) {
+      var x = s[g[0]], o = { k: x.k, grp: x.grp, name: g[1], n: x.n, td: r2(x.td), tc: r2(x.tc) };
+      setPair(o, ['od', 'oc'], x.o); setPair(o, ['dr', 'cr'], x.c);
+      return o;
+    });
+  }
+  function tbTotals(rows) {
+    var t = { od: 0, oc: 0, td: 0, tc: 0, dr: 0, cr: 0 };
+    rows.forEach(function (r) { Object.keys(t).forEach(function (f) { t[f] += num(r[f]); }); });
+    Object.keys(t).forEach(function (f) { t[f] = r2(t[f]); });
+    t.dopen = r2(t.od - t.oc); t.dtr = r2(t.td - t.tc); t.diff = r2(t.dr - t.cr);
+    return t;
+  }
+  function yearBack(iso) { var y = +iso.slice(0, 4) - 1, md = iso.slice(5); if (md === '02-29') md = '02-28'; return y + '-' + md; }
+  function prevYear(from, to) { return [from ? yearBack(from) : '', yearBack(to)]; }
+
   var API = { ORDER: ORDER, SIDE: SIDE, headOf: headOf, fromBooks: fromBooks, totals: totals, statements: statements, openStock: openStock, prevDay: prevDay, num: num, r2: r2 };
   API.capLoanLines = capLoanLines;   /* capital and loans (finrep.js) */
+  API.tbDetail = tbDetail; API.stockOff = stockOff; API.tbGroups = tbGroups; API.tbGroupOf = tbGroupOf; API.tbTotals = tbTotals; API.TBG = TBG; API.prevYear = prevYear;   /* trial balance styles (finrep.js) */
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else G.NSPL = API;
 })(typeof window !== 'undefined' ? window : this);

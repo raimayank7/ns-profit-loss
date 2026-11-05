@@ -77,7 +77,7 @@
       '<div class="f"><label for="pl-cs">' + esc(t('pl.cs', { d: NS.fmtDate(p.to) })) + '</label><input id="pl-cs" inputmode="decimal" value="' + esc(W.cs == null ? '' : W.cs) + '" placeholder="' + esc(W.src === 'books' ? money(C.cs, false) : '0') + '"></div></div>' +
       '<p class="hint">' + esc(t(W.src === 'books' ? 'pl.stockh' : 'pl.typedh')) + '</p>';
     var ok = Math.abs(F.tb.diff) < 0.005;
-    var tiles = '<div class="tiles"><div class="tile"><span>' + esc(t('pl.k_rev')) + '</span><b>' + money(F.pl.rev) + '</b></div><div class="tile"><span>' + esc(t('pl.k_gross')) + '</span><b>' + money(F.pl.gross) + '</b></div>' +
+    var tiles = '<div class="tiles"><div class="tile"><span>' + esc(t('pl.k_rev')) + '</span><b>' + money(F.pl.rev) + '</b></div><div class="tile"><span>' + esc(t('pl.k_gross')) + '</span><b>' + money(tfOn() ? tfFigs(C).R.gross : F.pl.gross) + '</b></div>' +
       '<div class="tile' + (F.pl.profit < 0 ? ' neg' : ' ok') + '"><span>' + esc(t(F.pl.profit < 0 ? 'pl.k_loss' : 'pl.k_profit')) + '</span><b>' + money(Math.abs(F.pl.profit)) + '</b></div>' +
       '<a class="tile' + (ok ? ' ok' : ' warn') + '" href="#tb"><span>' + esc(t('pl.k_tb')) + '</span><b>' + esc(ok ? t('pl.agrees') : money(F.tb.diff)) + '</b></a></div>';
     var warn = '';
@@ -86,11 +86,12 @@
     if (!typedCash) C.rows.forEach(function (r) { if ((r.k === 'cash' || r.k === 'bank') && r.cr) warn += '<p class="sb-note bad">' + esc(t('pl.w_neg', { a: nm(r) })) + '</p>'; });
     if (W.src === 'books' && !C.rows.some(function (r) { return r.g === 'rev'; })) warn += '<p class="sb-note">' + esc(t('pl.w_nosales')) + '</p>';
     if (W.src === 'books' && cur !== 'bs') warn += '<p class="hint">' + esc(t('uf.pfpl')) + '</p>';   /* why the App's Profit report can show another figure */
-    var body = cur === 'bs' ? bsHtml(C) : cur === 'tb' ? tbHtml(C) : plHtml(C);
+    var body = withPY(cur === 'bs' ? bsHtml(C) : cur === 'tb' ? tbHtml(C) : plHtml(C), C);
+    if (cur !== 'tb' && window.NSTF) body = fmtSwitch() + (tfOn() ? tfHtml(C) : body);   /* T format (tfcore.js, tfview.js) */
     return head + setup + tiles + warn + body +
       '<div class="btns"><button type="button" class="btn primary" data-save>' + esc(t('sb.save')) + '</button><button type="button" class="btn" data-print>' + esc(t('sb.print')) + '</button><button type="button" class="btn" data-pdf>' + esc(t('sb.pdf')) + '</button><button type="button" class="btn" data-csv>' + esc(t('sb.csv')) + '</button>' +
       (W.typed.length || W.os != null || W.cs != null || Object.keys(W.heads).length ? '<button type="button" class="btn danger" data-reset>' + esc(t('pl.reset')) + '</button>' : '') + '</div>' +
-      '<div class="sb-print">' + sheet(C) + '</div>';
+      '<div class="sb-print">' + sheetPY(C) + '</div>';
   }
   function tr(label, v, cls, sub) { return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><th scope="row" class="l' + (sub ? ' sub' : '') + '">' + esc(label) + '</th><td class="n">' + (v == null ? '' : money(v, false)) + '</td></tr>'; }
   function subs(C, g, neg) { return C.rows.filter(function (r) { return r.g === g; }).map(function (r) { return tr(nm(r), neg ? -amt(r) : amt(r), '', 1); }).join(''); }
@@ -137,8 +138,103 @@
       '<p class="sb-note">' + esc(t('pl.csnote', { x: money(C.cs) })) + '</p>';
   }
 
+  /* ---------- previous year column (Schedule III): the same dates one year earlier, from the saved records ----------
+     The tables are drawn as before for this period and for last year; the second one's figures are put beside the first,
+     row by row (rows only last year had go in at their place). Typed lines belong to this period only, so a statement made
+     from typed lines alone has no previous year (—). */
+  function prevCalc(C) {
+    var r = P.prevYear(C.p.from, C.p.to), pl = cur !== 'bs';
+    var has = W.src === 'books' && D().some(function (d) { return d.date && d.date <= r[1] && (!pl || d.date >= r[0]) && (NSBooks.role(d) || d.type === 'stk'); });
+    if (!has) return { r: r };
+    var base = P.fromBooks(D(), NSB.data().item, NSB.bizName(), r[0], r[1], { map: headMap() });
+    var rows = base.rows.map(function (x) { return W.heads[x.k] ? Object.assign({}, x, { g: W.heads[x.k] }) : x; });
+    rows.sort(function (a, b) { return P.ORDER.indexOf(a.g) - P.ORDER.indexOf(b.g); });
+    return { r: r, C: { p: { from: r[0], to: r[1] }, rows: rows, os: base.os, cs: base.cs, F: P.statements(rows, base.cs) } };
+  }
+  function rowKey(tr) {   /* class and label; the profit or loss line matches whichever word it has */
+    var c = tr.firstElementChild, x = c ? c.textContent.trim().replace(/\s+/g, ' ') : '';
+    return /\bbig\b/.test(tr.className) || /^(Profit|Loss) for the period$/.test(x) ? 'PL|' + tr.className : tr.className + '|' + x;
+  }
+  /* one table of this period (a) with last year's table (b) beside it; b null = no records */
+  function pyTable(a, b, heads) {
+    var dash = '—', th = a.tHead && a.tHead.rows[0];
+    if (th) { th.cells[th.cells.length - 1].textContent = heads[0]; var x = document.createElement('th'); x.className = 'n'; x.textContent = heads[1]; th.appendChild(x); }
+    var A1 = [].slice.call(a.tBodies[0].rows), last = null, used = [];
+    A1.forEach(function (tr) { var c = tr.cells[0]; if (tr.cells.length === 1 && c.colSpan > 1) c.colSpan = 3; else { var d = document.createElement('td'); d.className = 'n'; d.textContent = b ? '' : dash; tr.appendChild(d); } });
+    if (!b) return;
+    [].slice.call(b.tBodies[0].rows).forEach(function (tr) {
+      if (tr.cells.length === 1) return;
+      var k = rowKey(tr), v = tr.cells[tr.cells.length - 1].textContent, hit = null;
+      for (var i = 0; i < A1.length; i++) if (!used[i] && A1[i].cells.length > 1 && rowKey(A1[i]) === k) { hit = A1[i]; used[i] = 1; break; }
+      if (!hit) {
+        hit = tr.cloneNode(true); hit.cells[hit.cells.length - 1].textContent = dash; hit.appendChild(document.createElement('td')).className = 'n';
+        if (last && last.nextSibling) last.parentNode.insertBefore(hit, last.nextSibling); else (last ? last.parentNode : a.tBodies[0]).appendChild(hit);
+      } else if (/^PL\|/.test(k) && hit.cells[0].textContent !== tr.cells[0].textContent && v) v = '-' + v;   /* profit this year, loss last year */
+      hit.cells[hit.cells.length - 1].textContent = v || (hit.cells[hit.cells.length - 2].textContent.trim() ? dash : ''); last = hit;
+    });
+    A1.forEach(function (tr) { var c = tr.cells[tr.cells.length - 1]; if (tr.cells.length > 2 && !c.textContent && tr.cells[1].textContent) c.textContent = dash; });
+  }
+  function pyNote(pr, en) {
+    var a = NS.fmtDate(pr.r[0]), b = NS.fmtDate(pr.r[1]);
+    return en ? (pr.C ? 'Previous year: ' + a + ' to ' + b + ', the same dates one year earlier, from the saved records.' : 'Previous year (' + a + ' to ' + b + '): no records, shown as —.')
+      : t(pr.C ? 'tbs.pyh' : 'tbs.pynone', { a: a, b: b });
+  }
+  /* screen: the statement of this tab with the previous year column */
+  function withPY(html, C) {
+    if (cur === 'tb') return html;
+    var pr = prevCalc(C), box = document.createElement('div'), old = document.createElement('div');
+    box.innerHTML = html;
+    if (pr.C) old.innerHTML = cur === 'bs' ? bsHtml(pr.C) : plHtml(pr.C);
+    var ta = box.querySelector('table'), tb = pr.C && old.querySelector('table');
+    if (ta) { pyTable(ta, tb, [t('tbs.cy'), t('tbs.py')]); ta.parentNode.insertAdjacentHTML('afterend', '<p class="hint">' + esc(pyNote(pr)) + '</p>'); }
+    return box.innerHTML;
+  }
+  /* print sheet: profit and loss and balance sheet (the first two tables) with the previous year column */
+  function sheetPY(C) {
+    if (tfOn()) return sheet(C);   /* the T format sheet has no previous year column */
+    var html = sheet(C), save = cur, pr; cur = 'pl'; pr = prevCalc(C); cur = save;
+    var box = document.createElement('div'), old = document.createElement('div'); box.innerHTML = html;
+    if (pr.C) old.innerHTML = sheet(pr.C);
+    var ta = box.querySelectorAll('table'), tb = pr.C ? old.querySelectorAll('table') : [];
+    for (var i = 0; i < 2 && ta[i]; i++) { pyTable(ta[i], tb[i] || null, ['Current year (₹)', 'Previous year (₹)']); ta[i].insertAdjacentHTML('afterend', '<p class="soft">' + esc(pyNote(pr, 1)) + '</p>'); }
+    return box.innerHTML;
+  }
+
+  /* ---------- T format (horizontal): trading and profit and loss account, balance sheet ---------- */
+  function tfOn() { return !!window.NSTF && NSTF.fmt(NSB.cfg(), NSB.biz()) === 't'; }
+  function tfFigs(C) {
+    var R = NSTF.tradingPL(C.rows, C.cs, NSTFV.dx(NSB.cfg())), open = {}, books = W.src === 'books';
+    if (books && C.p.from) { var acc = NSBooks.accounts(D(), NSB.bizName(), P.prevDay(C.p.from)); Object.keys(acc).forEach(function (k) { if (k.indexOf('cap:') === 0) open[k] = -acc[k]; }); }
+    return { R: R, B: NSTF.balanceSheet(C.rows, C.cs, R.net, { capOpen: open, dep: books ? NSTF.depOf(D(), C.p.from, C.p.to) : {} }) };
+  }
+  function tfName(r, en) {   /* the App's expense heads saved as codes (power, rent ...) get their names; owners as typed */
+    if (/^(cap|drw):/.test(r.k)) { var jl = []; D().forEach(function (d) { if (d.type === 'jv') jl = jl.concat(d.lines || []); }); var hit = jl.filter(function (l) { return l.a === r.k && l.nm; })[0]; if (hit) return String(hit.nm).trim(); }
+    var c = r.src !== 'typed' && String(r.k).indexOf('exp:') === 0 && NSTFV.CODE_EN[r.k.slice(4)] ? r.k.slice(4) : '';
+    return c ? (en ? NSTFV.CODE_EN[c] : t('app.ex_' + c)) : en ? r.name : nm(r);
+  }
+  function fmtSwitch() {
+    var on = tfOn();
+    return '<div class="seg tf-fmt" role="group" aria-label="' + esc(t('tf.fmt')) + '" data-tffmt>' + [['t', 'tf.f_t'], ['v', 'tf.f_v']].map(function (x) {
+      return '<button type="button" class="btn sm" data-f="' + x[0] + '" aria-pressed="' + ((x[0] === 't') === on) + '">' + esc(t(x[1])) + '</button>'; }).join('') + '</div>';
+  }
+  function tfHtml(C) {
+    var F = tfFigs(C), p = C.p;
+    if (cur === 'bs') return '<h3>' + esc(t('tf.bsat', { d: NS.fmtDate(p.to) })) + '</h3><div class="tbl-wrap">' + NSTFV.html(F.B, 'bs', { name: tfName }) + '</div><p class="sb-note">' + esc(t('tf.bsnote')) + '</p>';
+    return '<h3>' + esc(t('tf.plfor', { a: NS.fmtDate(p.from), b: NS.fmtDate(p.to) })) + '</h3><div class="tbl-wrap">' + NSTFV.html(F.R, 'tpl', { name: tfName }) + '</div>' +
+      '<p class="sb-note">' + esc(t('tf.gpnote', { g: money(F.R.gross), d: money(F.R.direct) })) + ' <a href="' + esc(NSB.myUrl('#settings')) + '">' + esc(t('tf.dxchg')) + ' ›</a></p>';
+  }
+  /* English print sheet in the T format: trading and P&L, balance sheet, then the trial balance page of the vertical sheet */
+  function tfSheet(C) {
+    var b = NSB.biz() || {}, F = tfFigs(C), p = C.p, E = NSTFV.EN, o = { en: true, name: tfName }, full = sheet(C, true), tb = full.lastIndexOf('<div class="pb"></div>');
+    var top = function (what) { return '<div class="st-hd"><div><h3>' + esc(b.name || '') + '</h3><div class="soft">' + esc([b.addr, b.city, b.gstin && 'GSTIN ' + b.gstin].filter(Boolean).join(', ')) + '</div></div><div class="r"><b>' + esc(what) + '</b></div></div>'; };
+    return '<div class="stsheet" data-sheet>' + top(E.t_tpl + ' for ' + NS.fmtDate(p.from) + ' to ' + NS.fmtDate(p.to)) + NSTFV.html(F.R, 'tpl', o) +
+      '<p class="soft">Gross profit = sales less (opening stock + purchases + direct expenses − closing stock).</p>' +
+      '<div class="pb"></div>' + top(E.t_bs + ' as at ' + NS.fmtDate(p.to)) + NSTFV.html(F.B, 'bs', o) + full.slice(tb);
+  }
+
   /* English print sheet: profit and loss, balance sheet, trial balance (each on its own page) */
-  function sheet(C) {
+  function sheet(C, vert) {
+    if (!vert && tfOn()) return tfSheet(C);
     var b = NSB.biz() || {}, L = C.F.pl, S = C.F.bs, p = C.p;
     function r(l, v, cls) { return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + esc(l) + '</td><td class="n">' + (v == null ? '' : money(v, false)) + '</td></tr>'; }
     function lines(g, neg) { return C.rows.filter(function (x) { return x.g === g; }).map(function (x) { return r('   ' + x.name, neg ? -amt(x) : amt(x), 's'); }).join(''); }
@@ -170,15 +266,20 @@
     var f = NSB.dialog(t(i == null ? 'pl.addline' : 'pl.editline'), '<p class="hint">' + esc(t('pl.lineh')) + '</p><div class="fg"><div class="f wide"><label for="f-name">' + esc(t('pl.acct')) + '</label><input id="f-name" dir="auto" required value="' + esc(x.name) + '" list="pl-ideas"><datalist id="pl-ideas">' +
       ['i_cap', 'i_drw', 'i_ppe', 'i_dep', 'i_loan', 'i_int', 'i_oinc', 'i_cash', 'i_tax'].map(function (k) { return '<option value="' + esc(t('pl.' + k)) + '">'; }).join('') + '</datalist></div>' +
       '<div class="f wide"><label for="f-g">' + esc(t('pl.head')) + '</label>' + headSel('f-g', x.g) + '</div>' +
+      (window.NSTF ? '<div class="f wide" data-dxf><label class="chk"><input type="checkbox" id="f-dx"' + ((x.dx != null ? x.dx : NSTF.defaultDirect('', x.name)) ? ' checked' : '') + '> ' + esc(t('tf.dxq')) + '</label></div>' : '') +
       '<div class="f"><label for="f-dr">' + esc(t('pl.dr')) + '</label><input id="f-dr" inputmode="decimal" value="' + esc(x.dr || '') + '"></div><div class="f"><label for="f-cr">' + esc(t('pl.cr')) + '</label><input id="f-cr" inputmode="decimal" value="' + esc(x.cr || '') + '"></div></div>' +
       '<p class="hint">' + esc(t('pl.drcrh')) + '</p><div class="btns"><button class="btn primary">' + esc(t('sb.save')) + '</button><button type="button" class="btn" onclick="this.closest(\'dialog\').close()">' + esc(t('sb.cancel')) + '</button></div>');
     var guess = { i_cap: 'cap', i_drw: 'drw', i_ppe: 'ppe', i_dep: 'dep', i_loan: 'ltb', i_int: 'fin', i_oinc: 'oinc', i_cash: 'cash', i_tax: 'tax' };
+    var dxf = $('[data-dxf]', f), dxs = function () { if (dxf) dxf.hidden = !/^(emp|oth)$/.test($('#f-g', f).value); };
+    $('#f-g', f).addEventListener('change', dxs); dxs();
+    if (dxf && i == null) $('#f-name', f).addEventListener('change', function () { $('#f-dx', f).checked = NSTF.defaultDirect('', this.value); });   /* new line: default by its name */
     $('#f-name', f).addEventListener('change', function () { var v = key(this.value); Object.keys(guess).forEach(function (k) { if (key(t('pl.' + k)) === v) $('#f-g', f).value = guess[k]; }); });
     f.onsubmit = function (e) {
       e.preventDefault();
       var dr = r2(num($('#f-dr', f).value)), cr = r2(num($('#f-cr', f).value)), name = $('#f-name', f).value.trim();
       if (!name || !dr === !cr) { NS.toast(t('pl.oneamt'), 'bad'); return; }
       var row = { k: 'typed-' + Date.now().toString(36), name: name, g: $('#f-g', f).value, dr: dr, cr: cr };
+      if ($('#f-dx', f) && (row.g === 'emp' || row.g === 'oth')) row.dx = $('#f-dx', f).checked;   /* direct expense: T format trading account */
       if (i == null) W.typed.push(row); else { row.k = W.typed[i].k; W.typed[i] = row; }
       keepDraft(); NSB.closeDialog(); NS.toast(t('pl.lineok')); show();
     };
@@ -225,7 +326,19 @@
     var pr = $('[data-print]', pane), pdf = $('[data-pdf]', pane), cv = $('[data-csv]', pane);
     if (pr) pr.addEventListener('click', NSB.printSheet);
     if (pdf) pdf.addEventListener('click', function () { NSB.shareSheet($('[data-sheet]', pane), NSB.bizName() + ' profit and loss ' + NSB.period(SITE).to); });
+    var sw = $('[data-tffmt]', pane); if (sw) sw.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-f]'); if (!b || b.getAttribute('aria-pressed') === 'true') return;
+      var f = b.getAttribute('data-f');
+      NSStore.meta('settings').then(function (s) { s = s || {}; s.tf = Object.assign({}, s.tf, { fmt: f }); NSB.cfg().tf = s.tf; return NSStore.meta('settings', s); })
+        .then(function () { NS.toast(t('tf.fmtsaved')); show(); });
+    });
     if (cv) cv.addEventListener('click', function () {
+      if (tfOn()) {   /* T format: trading and P&L, balance sheet, trial balance */
+        var C2 = calc(), F2 = tfFigs(C2);
+        NSB.csv('final-accounts-' + C2.p.to + '.csv', [['Trading and Profit and Loss Account ' + C2.p.from + ' to ' + C2.p.to]].concat(NSTFV.rows(F2.R, 'tpl'), [[], ['Balance Sheet as at ' + C2.p.to]], NSTFV.rows(F2.B, 'bs'),
+          [[], ['Trial balance as at ' + C2.p.to], ['Account', 'Head', 'Debit', 'Credit']], C2.rows.map(function (x) { return [x.name, EN_H[x.g], x.dr || '', x.cr || '']; }), [['Total', '', C2.F.tb.dr, C2.F.tb.cr]]));
+        return;
+      }
       var C = calc(), L = C.F.pl, S = C.F.bs;
       NSB.csv('profit-and-loss-' + C.p.to + '.csv', [['Trial balance as at ' + C.p.to], ['Account', 'Head', 'Debit', 'Credit']]
         .concat(C.rows.map(function (x) { return [x.name, EN_H[x.g], x.dr || '', x.cr || '']; })).concat([['Total', '', C.F.tb.dr, C.F.tb.cr], [], ['Statement of profit and loss ' + C.p.from + ' to ' + C.p.to]])
