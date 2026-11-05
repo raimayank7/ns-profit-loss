@@ -34,7 +34,10 @@
     if (/income tax/.test(k)) return 'drw';   /* a proprietor's own income tax is drawings, not a business expense */
     return 'oth';
   }
-  function isPL(a) { return a === 'sales' || a === 'sales-return' || a === 'purchases' || a === 'purchase-return' || a === 'round-off' || a.indexOf('exp:') === 0; }
+  function isPL(a) { return a === 'sales' || a === 'sales-return' || a === 'purchases' || a === 'purchase-return' || a === 'round-off' || a.indexOf('exp:') === 0 || a.indexOf('inc:') === 0; }
+  /* accounts of journal entries and the fixed assets register (Batch 2): prefix -> head */
+  var PREFIX = { 'fa:': 'ppe', 'loan:': 'ltb', 'od:': 'stb', 'given:': 'oca', 'cap:': 'cap', 'drw:': 'drw' };
+  function cap1(s) { return String(s).replace(/^./, function (c) { return c.toUpperCase(); }); }
   function line(k, name, g, v, src) { v = r2(v); return { k: k, name: name, g: g, dr: v > 0 ? v : 0, cr: v < 0 ? -v : 0, src: src || 'books' }; }
   function bizOk(d, b) { return !b || key(d.seller && d.seller.name) === b; }
 
@@ -69,6 +72,7 @@
         plBefore += b0;
         var v = r2(u - b0); if (!v) return;
         if (a === 'round-off') rows.push(line(a, 'Round off', v > 0 ? 'oth' : 'oinc', v));
+        else if (a.indexOf('inc:') === 0) rows.push(line(a, cap1(a.slice(4)), 'oinc', v));
         else if (a.indexOf('exp:') === 0) { var nm = heads[a.slice(4)] || a.slice(4).replace(/^./, function (c) { return c.toUpperCase(); }); rows.push(line(a, nm, headOf(nm, opt.map), v)); }
         else rows.push(line(a, NAMES[a][0], NAMES[a][1], v));
         return;
@@ -76,6 +80,8 @@
       if (!u) return;
       if (a.indexOf('p:') === 0) { if (u > 0) { rec += u; nr++; } else { pay -= u; np++; } return; }
       if (/^gst-/.test(a)) { gst += u; return; }
+      var px = Object.keys(PREFIX).filter(function (x) { return a.indexOf(x) === 0; })[0];
+      if (px) { rows.push(line(a, cap1(a.slice(px.length)), PREFIX[px], u)); return; }
       if (NAMES[a]) rows.push(line(a, NAMES[a][0], NAMES[a][1], u));
       else rows.push(line(a, a, u > 0 ? 'oca' : 'ocl', u));
     });
