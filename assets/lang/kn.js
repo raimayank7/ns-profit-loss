@@ -2083,7 +2083,7 @@ NS.addLang("kn", {
   "br.oneamt": "ದಿನಾಂಕ ಮತ್ತು ತೆಗೆದದ್ದು ಅಥವಾ ಜಮೆಯಲ್ಲಿ ಒಂದನ್ನು ಬರೆಯಿರಿ.",
   "br.added": "ಸಾಲು ಸೇರಿತು.",
   /* cash and bank opening balance */
-  "app.s_cash": "ಆರಂಭದ ದಿನಾಂಕದಂದು ಕೈಯಲ್ಲಿರುವ ನಗದು",
+  "app.s_cash": "ಆರಂಭದ ದಿನಾಂಕದಂದು ಕೈಯಲ್ಲಿ ಕ್ಯಾಶ್",
   "app.s_bank": "ಆರಂಭದ ದಿನಾಂಕದಂದು ಬ್ಯಾಂಕ್ ಬ್ಯಾಲೆನ್ಸ್",
   /* profit and loss, balance sheet (profit-loss.niveshsahayak.in) */
   "nav.pl": "ಲಾಭ ನಷ್ಟ",
@@ -2209,4 +2209,9 @@ NS.addLang("kn", {
   "pl.l_gstout": "ಕಟ್ಟಬೇಕಾದ GST (ನಿವ್ವಳ)",
   "pl.l_earlierp": "ಹಿಂದಿನ ಅವಧಿಗಳ ಲಾಭ",
   "pl.l_earlierl": "ಹಿಂದಿನ ಅವಧಿಗಳ ನಷ್ಟ"
+});
+/* links to the Nivesh Sahayak App */
+NS.addLang("kn", {
+  "nav.app": "Nivesh Sahayak ಆಪ್",
+  "hub.app": "ಬಾಕಿ, ಬಂದ ಮತ್ತು ಕೊಟ್ಟ ಹಣ, ಖರೀದಿ, ಖರ್ಚು ಮತ್ತು ಪಾರ್ಟಿ ಸ್ಟೇಟ್‌ಮೆಂಟ್ ಎಲ್ಲವೂ ಒಂದೇ ಕಡೆ"
 });

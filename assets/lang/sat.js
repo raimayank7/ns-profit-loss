@@ -2083,7 +2083,7 @@ NS.addLang("sat", {
   "br.oneamt": "ᱢᱟᱹᱦᱤᱛ ᱟᱨ ᱚᱰᱚᱠ ᱥᱮ ᱡᱚᱢᱟ ᱠᱷᱚᱱ ᱢᱤᱫᱴᱟᱝ ᱚᱞ ᱢᱮ᱾",
   "br.added": "ᱛᱷᱟᱨ ᱥᱮᱞᱮᱫ ᱮᱱᱟ᱾",
   /* cash and bank opening balance */
-  "app.s_cash": "ᱮᱦᱚᱵ ᱢᱟᱦᱟᱸ ᱨᱮ ᱛᱤ ᱨᱮ ᱱᱚᱜᱚᱫ",
+  "app.s_cash": "ᱮᱦᱚᱵ ᱢᱟᱦᱟᱸ ᱨᱮ ᱛᱤ ᱨᱮ ᱠᱮᱥ",
   "app.s_bank": "ᱮᱦᱚᱵ ᱢᱟᱦᱟᱸ ᱨᱮ ᱵᱮᱝᱠ ᱵᱮᱞᱮᱱᱥ",
   /* profit and loss, balance sheet (profit-loss.niveshsahayak.in) */
   "nav.pl": "ᱞᱟᱵᱷ-ᱦᱟᱹᱱᱤ",
@@ -2209,4 +2209,9 @@ NS.addLang("sat", {
   "pl.l_gstout": "ᱮᱢ ᱞᱟᱹᱠᱛᱤ GST (ᱱᱮᱴ)",
   "pl.l_earlierp": "ᱞᱟᱦᱟ ᱚᱠᱛᱚ ᱨᱮᱭᱟᱜ ᱞᱟᱵᱷ",
   "pl.l_earlierl": "ᱞᱟᱦᱟ ᱚᱠᱛᱚ ᱨᱮᱭᱟᱜ ᱦᱟᱹᱱᱤ"
+});
+/* links to the Nivesh Sahayak App */
+NS.addLang("sat", {
+  "nav.app": "Nivesh Sahayak ᱮᱯ",
+  "hub.app": "ᱵᱟᱠᱤ, ᱧᱟᱢ ᱟᱨ ᱮᱢ ᱴᱟᱠᱟ, ᱠᱤᱨᱤᱧ, ᱠᱷᱚᱨᱚᱪ ᱟᱨ ᱯᱟᱨᱴᱤ ᱥᱴᱮᱴᱢᱮᱱᱴ, ᱡᱚᱛᱚ ᱢᱤᱫ ᱴᱷᱟᱶ ᱨᱮ"
 });

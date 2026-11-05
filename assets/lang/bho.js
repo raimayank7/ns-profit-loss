@@ -2083,7 +2083,7 @@ NS.addLang("bho", {
   "br.oneamt": "तारीख आ निकासी भा जमा में से एगो लिखीं।",
   "br.added": "लाइन जुड़ गइल।",
   /* cash and bank opening balance */
-  "app.s_cash": "सुरुआत के तारीख पर हाथ में नकद",
+  "app.s_cash": "सुरुआत के तारीख पर हाथ में कैश",
   "app.s_bank": "सुरुआत के तारीख पर बैंक बैलेंस",
   /* profit and loss, balance sheet (profit-loss.niveshsahayak.in) */
   "nav.pl": "नफा-नुकसान",
@@ -2209,4 +2209,9 @@ NS.addLang("bho", {
   "pl.l_gstout": "GST देवे के बा (नेट)",
   "pl.l_earlierp": "पिछला समय के प्रॉफिट",
   "pl.l_earlierl": "पिछला समय के लॉस"
+});
+/* links to the Nivesh Sahayak App */
+NS.addLang("bho", {
+  "nav.app": "Nivesh Sahayak ऐप",
+  "hub.app": "बकाया, मिलल आ दिहल पइसा, खरीद, खरचा आ पार्टी स्टेटमेंट, सब एक जगह"
 });

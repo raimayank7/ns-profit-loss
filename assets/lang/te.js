@@ -2086,7 +2086,7 @@ NS.addLang("te", {
   "br.oneamt": "తేదీ, విత్‌డ్రాయల్ లేదా డిపాజిట్‌లో ఒకటి రాయండి.",
   "br.added": "లైన్ చేరింది.",
   /* cash and bank opening balance */
-  "app.s_cash": "మొదటి తేదీన చేతిలో నగదు",
+  "app.s_cash": "మొదటి తేదీన చేతిలో క్యాష్",
   "app.s_bank": "మొదటి తేదీన బ్యాంక్ బ్యాలెన్స్",
   /* profit and loss, balance sheet (profit-loss.niveshsahayak.in) */
   "nav.pl": "లాభ నష్టాలు",
@@ -2212,4 +2212,9 @@ NS.addLang("te", {
   "pl.l_gstout": "చెల్లించాల్సిన GST (నికర)",
   "pl.l_earlierp": "గత కాలాల లాభం",
   "pl.l_earlierl": "గత కాలాల నష్టం"
+});
+/* links to the Nivesh Sahayak App */
+NS.addLang("te", {
+  "nav.app": "Nivesh Sahayak యాప్",
+  "hub.app": "బాకీలు, వచ్చిన మరియు ఇచ్చిన డబ్బు, కొనుగోళ్లు, ఖర్చులు, పార్టీ స్టేట్‌మెంట్ అన్నీ ఒకే చోట"
 });

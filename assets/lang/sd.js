@@ -2083,7 +2083,7 @@ NS.addLang("sd", {
   "br.oneamt": "تاريخ ۽ ڪڍيل يا جمع مان هڪ لکو.",
   "br.added": "لائين شامل ٿي.",
   /* cash and bank opening balance */
-  "app.s_cash": "شروعاتي تاريخ تي هٿ ۾ نقد",
+  "app.s_cash": "شروعاتي تاريخ تي هٿ ۾ ڪيش",
   "app.s_bank": "شروعاتي تاريخ تي بئنڪ بيلنس",
   /* profit and loss, balance sheet (profit-loss.niveshsahayak.in) */
   "nav.pl": "نفعو نقصان",
@@ -2209,4 +2209,9 @@ NS.addLang("sd", {
   "pl.l_gstout": "ڏيڻو GST (نيٽ)",
   "pl.l_earlierp": "اڳين مدت جو پرافٽ",
   "pl.l_earlierl": "اڳين مدت جو لاس"
+});
+/* links to the Nivesh Sahayak App */
+NS.addLang("sd", {
+  "nav.app": "Nivesh Sahayak ايپ",
+  "hub.app": "بقايا، مليل ۽ ڏنل پئسا، خريداري، خرچ ۽ پارٽي اسٽيٽمينٽ، سڀ هڪ هنڌ"
 });

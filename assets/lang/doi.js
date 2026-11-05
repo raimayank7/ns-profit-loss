@@ -2084,7 +2084,7 @@ NS.addLang("doi", {
   "br.oneamt": "तरीक ते कढ्ढेआ जां जमा चा इक लिखो।",
   "br.added": "लाइन जुड़ी गेई।",
   /* cash and bank opening balance */
-  "app.s_cash": "शुरू दी तरीक गी हत्थ च नकद",
+  "app.s_cash": "शुरू दी तरीक गी हत्थै च कैश",
   "app.s_bank": "शुरू दी तरीक गी बैंक बैलेंस",
   /* profit and loss, balance sheet (profit-loss.niveshsahayak.in) */
   "nav.pl": "नफा-नुकसान",
@@ -2210,4 +2210,9 @@ NS.addLang("doi", {
   "pl.l_gstout": "GST देना ऐ (नेट)",
   "pl.l_earlierp": "पिछले समें दा प्रॉफिट",
   "pl.l_earlierl": "पिछले समें दा लॉस"
+});
+/* links to the Nivesh Sahayak App */
+NS.addLang("doi", {
+  "nav.app": "Nivesh Sahayak ऐप",
+  "hub.app": "बकाया, मिलेआ ते दित्ता पैसा, खरीद, खर्चे ते पार्टी स्टेटमेंट, सब इक जगह"
 });

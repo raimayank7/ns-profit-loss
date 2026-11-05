@@ -2084,7 +2084,7 @@ NS.addLang("ur", {
   "br.oneamt": "تاریخ اور نکاسی یا جمع میں سے ایک لکھیں۔",
   "br.added": "لائن جڑ گئی۔",
   /* cash and bank opening balance */
-  "app.s_cash": "شروع کی تاریخ پر ہاتھ میں نقد",
+  "app.s_cash": "شروع کی تاریخ پر ہاتھ میں کیش",
   "app.s_bank": "شروع کی تاریخ پر بینک بیلنس",
   /* profit and loss, balance sheet (profit-loss.niveshsahayak.in) */
   "nav.pl": "نفع نقصان",
@@ -2210,4 +2210,9 @@ NS.addLang("ur", {
   "pl.l_gstout": "GST دینا ہے (نیٹ)",
   "pl.l_earlierp": "پچھلی مدت کا پرافٹ",
   "pl.l_earlierl": "پچھلی مدت کا لاس"
+});
+/* links to the Nivesh Sahayak App */
+NS.addLang("ur", {
+  "nav.app": "Nivesh Sahayak ایپ",
+  "hub.app": "بقایا، ملا اور دیا پیسہ، خریداری، خرچے اور پارٹی اسٹیٹمنٹ، سب ایک جگہ"
 });

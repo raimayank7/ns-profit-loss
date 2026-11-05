@@ -2083,7 +2083,7 @@ NS.addLang("gu", {
   "br.oneamt": "તારીખ અને ઉપાડ કે જમામાંથી એક લખો.",
   "br.added": "લાઇન ઉમેરાઈ.",
   /* cash and bank opening balance */
-  "app.s_cash": "શરૂઆતની તારીખે હાથમાં રોકડ",
+  "app.s_cash": "શરૂઆતની તારીખે હાથમાં કેશ",
   "app.s_bank": "શરૂઆતની તારીખે બૅન્ક બેલેન્સ",
   /* profit and loss, balance sheet (profit-loss.niveshsahayak.in) */
   "nav.pl": "નફો-નુકસાન",
@@ -2209,4 +2209,9 @@ NS.addLang("gu", {
   "pl.l_gstout": "GST ચૂકવવાનો (નેટ)",
   "pl.l_earlierp": "પાછલા સમયગાળાનો પ્રોફિટ",
   "pl.l_earlierl": "પાછલા સમયગાળાનો લોસ"
+});
+/* links to the Nivesh Sahayak App */
+NS.addLang("gu", {
+  "nav.app": "Nivesh Sahayak ઍપ",
+  "hub.app": "બાકી, મળેલા અને આપેલા પૈસા, ખરીદી, ખર્ચ અને પાર્ટી સ્ટેટમેન્ટ, બધું એક જગ્યાએ"
 });

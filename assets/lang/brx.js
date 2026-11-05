@@ -2083,7 +2083,7 @@ NS.addLang("brx", {
   "br.oneamt": "तारिख आरो दिहुननाय एबा जमानि मोनसेखौ लिर।",
   "br.added": "सारि दाजाबबाय।",
   /* cash and bank opening balance */
-  "app.s_cash": "जागायनाय तारिखाव आखायाव थानाय नगद",
+  "app.s_cash": "जागायनाय तारिखाव आखायाव केस",
   "app.s_bank": "जागायनाय तारिखाव बेंक बेलेन्स",
   /* profit and loss, balance sheet (profit-loss.niveshsahayak.in) */
   "nav.pl": "मुनाफा-खहा",
@@ -2209,4 +2209,9 @@ NS.addLang("brx", {
   "pl.l_gstout": "होनांगौ GST (नेट)",
   "pl.l_earlierp": "सिगांनि समनि मुनाफा",
   "pl.l_earlierl": "सिगांनि समनि खहा"
+});
+/* links to the Nivesh Sahayak App */
+NS.addLang("brx", {
+  "nav.app": "Nivesh Sahayak एप",
+  "hub.app": "बाकि, मोननाय आरो होनाय रां, बायनाय, खरच आरो पार्टि स्टेटमेन्ट, गासैबो मोनसे जायगायाव"
 });

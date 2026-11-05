@@ -2083,7 +2083,7 @@ NS.addLang("as", {
   "br.oneamt": "তাৰিখ আৰু উলিওৱা বা জমাৰ এটা লিখক।",
   "br.added": "শাৰী যোগ হ'ল।",
   /* cash and bank opening balance */
-  "app.s_cash": "আৰম্ভণিৰ তাৰিখত হাতত থকা নগদ",
+  "app.s_cash": "আৰম্ভণিৰ তাৰিখত হাতত কেশ্ব",
   "app.s_bank": "আৰম্ভণিৰ তাৰিখত বেংক বেলেন্স",
   /* profit and loss, balance sheet (profit-loss.niveshsahayak.in) */
   "nav.pl": "লাভ-লোকচান",
@@ -2209,4 +2209,9 @@ NS.addLang("as", {
   "pl.l_gstout": "দিবলগীয়া GST (নেট)",
   "pl.l_earlierp": "আগৰ সময়ৰ প্ৰফিট",
   "pl.l_earlierl": "আগৰ সময়ৰ লছ"
+});
+/* links to the Nivesh Sahayak App */
+NS.addLang("as", {
+  "nav.app": "Nivesh Sahayak এপ",
+  "hub.app": "বাকী, পোৱা আৰু দিয়া টকা, কিনা, খৰচ আৰু পাৰ্টী ষ্টেটমেণ্ট, সকলো এঠাইত"
 });

@@ -2083,7 +2083,7 @@ NS.addLang("kok", {
   "br.oneamt": "तारीख आनी काडिल्ली रक्कम वा जमा हातूंतलें एक बरयात.",
   "br.added": "ओळ जोडली.",
   /* cash and bank opening balance */
-  "app.s_cash": "सुरवातेच्या तारखेक हातांतली रोख",
+  "app.s_cash": "सुरवातेच्या तारखेक हातांतली कॅश",
   "app.s_bank": "सुरवातेच्या तारखेक बँक बॅलन्स",
   /* profit and loss, balance sheet (profit-loss.niveshsahayak.in) */
   "nav.pl": "फायदो-लुकसाण",
@@ -2209,4 +2209,9 @@ NS.addLang("kok", {
   "pl.l_gstout": "भरपाचो GST (नेट)",
   "pl.l_earlierp": "फाटल्या काळाचो प्रॉफिट",
   "pl.l_earlierl": "फाटल्या काळाचो लॉस"
+});
+/* links to the Nivesh Sahayak App */
+NS.addLang("kok", {
+  "nav.app": "Nivesh Sahayak ॲप",
+  "hub.app": "येणें-देणें, मेळिल्ले आनी दिल्ले पयशे, खरेदी, खर्च आनी पार्टी स्टेटमेंट, सगळें एके सुवातेर"
 });

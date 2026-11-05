@@ -2083,7 +2083,7 @@ NS.addLang("mai", {
   "br.oneamt": "तारीख आ निकासी वा जमा मे सँ एकटा लिखू।",
   "br.added": "लाइन जुड़ि गेल।",
   /* cash and bank opening balance */
-  "app.s_cash": "शुरुआतक तारीख पर हाथ मे नकद",
+  "app.s_cash": "शुरुआतक तारीख पर हाथ मे कैश",
   "app.s_bank": "शुरुआतक तारीख पर बैंक बैलेंस",
   /* profit and loss, balance sheet (profit-loss.niveshsahayak.in) */
   "nav.pl": "नफा-नोकसान",
@@ -2209,4 +2209,9 @@ NS.addLang("mai", {
   "pl.l_gstout": "GST देबाक अछि (नेट)",
   "pl.l_earlierp": "पछिला अवधिक प्रॉफिट",
   "pl.l_earlierl": "पछिला अवधिक लॉस"
+});
+/* links to the Nivesh Sahayak App */
+NS.addLang("mai", {
+  "nav.app": "Nivesh Sahayak ऐप",
+  "hub.app": "बकाया, भेटल आ देल पाइ, खरीद, खर्चा आ पार्टी स्टेटमेंट, सभ एक ठाम"
 });

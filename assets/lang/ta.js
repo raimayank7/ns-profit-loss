@@ -2086,7 +2086,7 @@ NS.addLang("ta", {
   "br.oneamt": "தேதியும் எடுத்தது அல்லது டெபாசிட்டில் ஒன்றையும் எழுதுங்கள்.",
   "br.added": "வரி சேர்க்கப்பட்டது.",
   /* cash and bank opening balance */
-  "app.s_cash": "தொடக்கத் தேதியில் கையிருப்பு ரொக்கம்",
+  "app.s_cash": "தொடக்கத் தேதியில் கையில் கேஷ்",
   "app.s_bank": "தொடக்கத் தேதியில் பேங்க் பேலன்ஸ்",
   /* profit and loss, balance sheet (profit-loss.niveshsahayak.in) */
   "nav.pl": "லாப நஷ்டம்",
@@ -2212,4 +2212,9 @@ NS.addLang("ta", {
   "pl.l_gstout": "செலுத்த வேண்டிய GST (நிகர)",
   "pl.l_earlierp": "முந்தைய காலங்களின் லாபம்",
   "pl.l_earlierl": "முந்தைய காலங்களின் நஷ்டம்"
+});
+/* links to the Nivesh Sahayak App */
+NS.addLang("ta", {
+  "nav.app": "Nivesh Sahayak ஆப்",
+  "hub.app": "நிலுவை, வந்த மற்றும் கொடுத்த பணம், வாங்குதல், செலவுகள், பார்ட்டி ஸ்டேட்மென்ட் எல்லாம் ஒரே இடத்தில்"
 });

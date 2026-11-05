@@ -2083,7 +2083,7 @@ NS.addLang("sa", {
   "br.oneamt": "दिनाङ्कं आहरणं जमा वा इत्येकं च लिखतु।",
   "br.added": "पङ्क्तिः योजिता।",
   /* cash and bank opening balance */
-  "app.s_cash": "आरम्भ-दिनाङ्के हस्ते नगदम्",
+  "app.s_cash": "आरम्भ-दिनाङ्के हस्ते कैश",
   "app.s_bank": "आरम्भ-दिनाङ्के बैंक-शेषः",
   /* profit and loss, balance sheet (profit-loss.niveshsahayak.in) */
   "nav.pl": "लाभहानिः",
@@ -2209,4 +2209,9 @@ NS.addLang("sa", {
   "pl.l_gstout": "देयम् GST (नेट)",
   "pl.l_earlierp": "पूर्वकालस्य प्रॉफिट",
   "pl.l_earlierl": "पूर्वकालस्य लॉस"
+});
+/* links to the Nivesh Sahayak App */
+NS.addLang("sa", {
+  "nav.app": "Nivesh Sahayak ऐप",
+  "hub.app": "शेषदेयं, प्राप्तं दत्तं च धनं, क्रयः, व्ययाः, पक्ष-स्टेटमेंट च, सर्वम् एकत्र"
 });

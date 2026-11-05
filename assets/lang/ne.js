@@ -2083,7 +2083,7 @@ NS.addLang("ne", {
   "br.oneamt": "मिति र झिकेको वा जम्मामध्ये एउटा लेख्नुहोस्।",
   "br.added": "लाइन थपियो।",
   /* cash and bank opening balance */
-  "app.s_cash": "सुरुको मितिमा हातमा नगद",
+  "app.s_cash": "सुरुको मितिमा हातमा क्यास",
   "app.s_bank": "सुरुको मितिमा बैंक ब्यालेन्स",
   /* profit and loss, balance sheet (profit-loss.niveshsahayak.in) */
   "nav.pl": "नाफा-नोक्सान",
@@ -2209,4 +2209,9 @@ NS.addLang("ne", {
   "pl.l_gstout": "तिर्नुपर्ने GST (नेट)",
   "pl.l_earlierp": "अघिल्लो अवधिको प्रफिट",
   "pl.l_earlierl": "अघिल्लो अवधिको लस"
+});
+/* links to the Nivesh Sahayak App */
+NS.addLang("ne", {
+  "nav.app": "Nivesh Sahayak एप",
+  "hub.app": "बाँकी, पाएको र दिएको पैसा, खरिद, खर्च र पार्टी स्टेटमेन्ट, सबै एकै ठाउँमा"
 });
