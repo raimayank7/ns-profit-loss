@@ -36,7 +36,19 @@
   }
   function isPL(a) { return a === 'sales' || a === 'sales-return' || a === 'purchases' || a === 'purchase-return' || a === 'round-off' || a.indexOf('exp:') === 0 || a.indexOf('inc:') === 0; }
   /* accounts of journal entries and the fixed assets register (Batch 2): prefix -> head */
-  var PREFIX = { 'fa:': 'ppe', 'loan:': 'ltb', 'od:': 'stb', 'given:': 'oca', 'cap:': 'cap', 'drw:': 'drw' };
+  var PREFIX = { 'fa:': 'ppe', 'loan:': 'ltb', 'od:': 'stb', 'given:': 'oca', 'cap:': 'cap', 'drw:': 'drw', 'ocl:': 'ocl', 'oca:': 'oca' };
+  /* GST ledgers, one trial balance line each like Tally (user test 2026-11-06); on the balance sheet they stay one net figure:
+     every GST line takes the head of their net balance (input credit 'oca' or payable 'ocl') */
+  var GSTN = { 'gst-in-cgst': 'Input CGST', 'gst-in-sgst': 'Input SGST', 'gst-in-utgst': 'Input UTGST', 'gst-in-igst': 'Input IGST', 'gst-out-cgst': 'Output CGST', 'gst-out-sgst': 'Output SGST',
+    'gst-out-utgst': 'Output UTGST', 'gst-out-igst': 'Output IGST', 'gst-rcm-payable': 'GST payable on reverse charge' };
+  function gstName(a) { return GSTN[a] || 'GST: ' + a.slice(4); }
+  /* balance sheets show GST as one net line (input credit or payable); the trial balance keeps the ledgers */
+  function gstNet(rows) {
+    var v = 0, at = -1, out = [];
+    (rows || []).forEach(function (r) { if (/^gst-/.test(r.k)) { v += num(r.dr) - num(r.cr); if (at < 0) at = out.length; } else out.push(r); });
+    if (at >= 0 && r2(v)) out.splice(at, 0, line('gst', v > 0 ? 'GST input credit (net)' : 'GST payable (net)', v > 0 ? 'oca' : 'ocl', v));
+    return out;
+  }
   function cap1(s) { return String(s).replace(/^./, function (c) { return c.toUpperCase(); }); }
   function line(k, name, g, v, src) { v = r2(v); return { k: k, name: name, g: g, dr: v > 0 ? v : 0, cr: v < 0 ? -v : 0, src: src || 'books' }; }
   function bizOk(d, b) { return !b || key(d.seller && d.seller.name) === b; }
@@ -53,7 +65,7 @@
 
   var NAMES = { sales: ['Sales', 'rev'], 'sales-return': ['Sales returns', 'rev'], purchases: ['Purchases', 'pur'], 'purchase-return': ['Purchase returns', 'pur'],
     cash: ['Cash in hand', 'cash'], bank: ['Bank', 'cash'], 'chq-in': ['Cheques in hand', 'cash'], 'chq-out': ['Cheques issued, not yet cleared', 'ocl'],
-    'tds-receivable': ['TDS receivable', 'oca'], 'tds-payable': ['TDS payable', 'ocl'], opening: ['Opening balances of parties', 'cap'] };
+    'tds-receivable': ['TDS receivable', 'oca'], 'tds-payable': ['TDS payable', 'ocl'], opening: ['Opening balances (difference carried to capital)', 'cap'] };   /* opening cash, bank and party balances typed in (user test 2026-11-06: not only parties) */
 
   /* trial balance from the saved records. opt: { os, cs } typed opening / closing stock (else from the stock register), map (expense heads) */
   function fromBooks(docs, items, biz, from, to, opt) {
@@ -64,7 +76,7 @@
       if (d.cat) heads[key(d.cat)] = heads[key(d.cat)] || String(d.cat).trim();
       (d.lines || []).forEach(function (l) { if (l && l.head) heads[key(l.head)] = heads[key(l.head)] || String(l.head).trim(); });
     });
-    var rows = [], plBefore = 0, rec = 0, pay = 0, nr = 0, np = 0, gst = 0, seen = {};
+    var rows = [], plBefore = 0, rec = 0, pay = 0, nr = 0, np = 0, gst = 0, gstL = [], seen = {};
     Object.keys(upto).concat(Object.keys(before)).forEach(function (a) {
       if (seen[a]) return; seen[a] = 1;
       var u = upto[a] || 0, b0 = before[a] || 0;
@@ -79,7 +91,7 @@
       }
       if (!u) return;
       if (a.indexOf('p:') === 0) { if (u > 0) { rec += u; nr++; } else { pay -= u; np++; } return; }
-      if (/^gst-/.test(a)) { gst += u; return; }
+      if (/^gst-/.test(a)) { gst += u; gstL.push([a, u]); return; }
       var px = Object.keys(PREFIX).filter(function (x) { return a.indexOf(x) === 0; })[0];
       if (px) { rows.push(line(a, cap1(a.slice(px.length)), PREFIX[px], u)); return; }
       if (NAMES[a]) rows.push(line(a, NAMES[a][0], NAMES[a][1], u));
@@ -87,7 +99,7 @@
     });
     if (r2(rec)) { var x = line('trec', 'Trade receivables (customers who owe you)', 'trec', rec); x.n = nr; rows.push(x); }
     if (r2(pay)) { var y = line('tpay', 'Trade payables (suppliers you owe)', 'tpay', -pay); y.n = np; rows.push(y); }
-    if (r2(gst)) rows.push(line('gst', gst > 0 ? 'GST input credit (net)' : 'GST payable (net)', gst > 0 ? 'oca' : 'ocl', gst));
+    gstL.forEach(function (p) { if (r2(p[1])) rows.push(line(p[0], gstName(p[0]), gst > 0 ? 'oca' : 'ocl', p[1])); });
     var openAll = openStock(docs, biz, '', to), openIn = openStock(docs, biz, from, to);
     var os = opt.os != null ? r2(num(opt.os)) : r2((from && S ? S.summary(docs, items, biz, '', prevDay(from)).value : 0) + openIn);
     var cs = opt.cs != null ? r2(num(opt.cs)) : S ? S.summary(docs, items, biz, '', to).value : 0;
@@ -95,12 +107,15 @@
        of earlier periods), closing WIP joins the closing stock (inventories) */
     var wo = r2(num(opt.wipOpen)), wc = r2(num(opt.wipClose));
     if (wo || wc) { os = r2(os + wo); cs = r2(cs + wc); }
+    /* finished goods at full cost (AS 2, facore.js fullCost): factory overheads on made goods in stock, given by the page */
+    var ao = opt.os != null ? 0 : r2(num(opt.as2Open)), ac = opt.cs != null ? 0 : r2(num(opt.as2Close));
+    if (ao || ac) { os = r2(os + ao); cs = r2(cs + ac); }
     if (os) rows.push(line('osk', wo ? 'Opening stock (with work in progress)' : 'Opening stock', 'osk', os, 'stock'));
     if (openAll) rows.push(line('cap-stock', 'Stock brought in (opening stock records)', 'cap', -openAll, 'stock'));
     var earlier = r2(plBefore - os + openAll);
     if (earlier) rows.push(line('res-earlier', earlier < 0 ? 'Profit of earlier periods' : 'Loss of earlier periods', 'res', earlier));
     rows.sort(function (p, q) { return ORDER.indexOf(p.g) - ORDER.indexOf(q.g) || p.name.localeCompare(q.name); });
-    return { rows: rows, os: os, cs: cs, wipOpen: wo, wipClose: wc };
+    return { rows: rows, os: os, cs: cs, wipOpen: wo, wipClose: wc, as2Open: ao, as2Close: ac };
   }
 
   function totals(rows) {
@@ -177,8 +192,10 @@
       if (a.indexOf('p:') === 0) {
         g = u > 0 || !r2(u) && (b0 > 0 || !r2(b0) && x.dr >= x.cr) ? 'trec' : 'tpay';
         if (opt.each) { add({ k: a, name: a.slice(2), g: g, src: 'books' }, b0, x.dr, x.cr); return; }
-      } else if (/^gst-/.test(a)) g = 'gst';
-      else if (isPL(a)) {
+      } else if (/^gst-/.test(a)) {   /* each GST ledger on its own line, with the head fromBooks gave the GST lines */
+        var gh = base.rows.filter(function (r) { return r.k === a; })[0] || base.rows.filter(function (r) { return /^gst-/.test(r.k); })[0];
+        add(gh && gh.k === a ? gh : line(a, gstName(a), gh ? gh.g : 'ocl', 0), b0, x.dr, x.cr); return;
+      } else if (isPL(a)) {
         var hit = base.rows.filter(function (r) { return r.k === a; })[0];
         if (hit) add(hit, 0, x.dr, x.cr);
         else if (x.dr || x.cr) add(line(a, a.indexOf('exp:') === 0 ? cap1(a.slice(4)) : a.indexOf('inc:') === 0 ? cap1(a.slice(4)) : NAMES[a] ? NAMES[a][0] : a, a.indexOf('inc:') === 0 ? 'oinc' : a.indexOf('exp:') === 0 ? 'oth' : NAMES[a] ? NAMES[a][1] : 'oth', 0), 0, x.dr, x.cr);
@@ -232,7 +249,7 @@
     if (g === 'res') return 'gres';
     if (g === 'ltb' || g === 'stb') return 'gloan';
     if (g === 'tpay') return 'gcred';
-    if (k === 'gst' || /^gst-/.test(k) || k === 'tds-payable') return g === 'oca' && k !== 'gst' ? 'gadv' : 'gtax';
+    if (k === 'gst' || /^gst-/.test(k) || k === 'tds-payable') return 'gtax';   /* Tally keeps input and output GST under Duties & Taxes */
     if (g === 'ocl') return 'gcl';
     if (g === 'ppe') return 'gfa';
     if (g === 'ninv') return 'ginv';
@@ -266,10 +283,16 @@
     return t;
   }
   function yearBack(iso) { var y = +iso.slice(0, 4) - 1, md = iso.slice(5); if (md === '02-29') md = '02-28'; return y + '-' + md; }
-  function prevYear(from, to) { return [from ? yearBack(from) : '', yearBack(to)]; }
+  /* previous year column: a statement of profit and loss compares the same dates one year earlier; a balance sheet compares
+     the last closed year end (as at 31 March before this period's financial year), with that whole year for its profit */
+  function prevYear(from, to, bs) {
+    if (bs) { var y = +to.slice(0, 4) - (+to.slice(5, 7) < 4 ? 1 : 0); return [(y - 1) + '-04-01', y + '-03-31']; }
+    return [from ? yearBack(from) : '', yearBack(to)];
+  }
 
   var API = { ORDER: ORDER, SIDE: SIDE, headOf: headOf, fromBooks: fromBooks, totals: totals, statements: statements, openStock: openStock, prevDay: prevDay, num: num, r2: r2 };
-  API.capLoanLines = capLoanLines;   /* capital and loans (finrep.js) */
+  API.capLoanLines = capLoanLines;
+  API.gstNet = gstNet;   /* user test 2026-11-06: GST ledgers one by one in the trial balance, net on the balance sheet */   /* capital and loans (finrep.js) */
   API.tbDetail = tbDetail; API.stockOff = stockOff; API.tbGroups = tbGroups; API.tbGroupOf = tbGroupOf; API.tbTotals = tbTotals; API.TBG = TBG; API.prevYear = prevYear;   /* trial balance styles (finrep.js) */
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else G.NSPL = API;
 })(typeof window !== 'undefined' ? window : this);

@@ -103,7 +103,9 @@
 
   /* Balance sheet. opt: { capOpen: { account key: credit balance on the day before the period }, dep: { fa account: depreciation
      of the period } }. Capital accounts are cap:<owner> / drw:<owner> (finrep.js capital form); with one owner (or none) every
-     capital line is one capital account, with several each partner gets an account and the rest stays undivided. */
+     capital line is one capital account, with several each partner gets an account and the rest stays undivided.
+     opt.firm = NSFA.firm(...) for a partnership firm / LLP (famore.js A.famFirm): each partner's capital account then carries
+     interest, salary and share of profit or loss, exactly as the Schedule III balance sheet, nothing left undivided. */
   function balanceSheet(rows, cs, net, opt) {
     opt = opt || {}; cs = r2(num(cs)); net = r2(num(net));
     var capOpen = opt.capOpen || {}, depMap = opt.dep || {};
@@ -122,19 +124,38 @@
       else if (x.g === 'ltb') grp.ltb.push(x);
       else if (x.g === 'stb') grp.stb.push(x);
       else if (x.g === 'tpay') grp.tpay.push(x);
-      else if (x.g === 'ocl') (x.k === 'gst' || x.k === 'tds-payable' || /\b(gst|tds|tcs|tax|duty|duties|cess)\b/i.test(x.en || x.name || '') ? grp.duty : grp.ocl).push(x);
+      else if (x.g === 'ocl') (x.k === 'gst' || /^gst-/.test(x.k) || x.k === 'tds-payable' || /\b(gst|tds|tcs|tax|duty|duties|cess)\b/i.test(x.en || x.name || '') ? grp.duty : grp.ocl).push(x);
       else if (x.g === 'ppe') grp.ppe.push(x);
       else if (x.g === 'ninv') grp.ninv.push(x);
       else if (x.g === 'trec') grp.trec.push(x);
       else if (x.g === 'cash') (x.k === 'bank' ? grp.bank : x.k === 'chq-in' ? grp.chq : grp.cash).push(x);
-      else if (x.g === 'oca') (x.k === 'gst' ? grp.gstin : x.k === 'tds-receivable' ? grp.tdsr : grp.oca).push(x);
+      else if (x.g === 'oca') (x.k === 'gst' || /^gst-/.test(x.k) ? grp.gstin : x.k === 'tds-receivable' ? grp.tdsr : grp.oca).push(x);
     });
     /* owners whose name came only from drawings */
     Object.keys(owners).forEach(function (k) { var o = owners[k]; o.drw = r2(o.drw); if (!o.name) { var d = rows.filter(function (y) { return y.k === 'drw:' + k; })[0]; o.name = d ? d.en || d.name : k; } });
     var list = Object.keys(owners).map(function (k) { return owners[k]; }).sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
     function sum(a) { return r2(a.reduce(function (s, y) { return s + y.v; }, 0)); }
-    var oDrw = sum(otherDrw);
-    if (list.length <= 1) {
+    var oDrw = sum(otherDrw), fc = opt.firm && opt.firm.caps && opt.firm.caps.length ? opt.firm.caps : null;
+    if (fc) {
+      var inF = {}; fc.forEach(function (c) { inF[c.k] = 1; });
+      fc.forEach(function (c) {
+        var p = [{ t: 'capopen', v: c.open }];
+        if (c.intro) p.push({ t: 'capadd', v: c.intro });
+        if (c.int) p.push({ t: 'capint', v: c.int });
+        if (c.sal) p.push({ t: 'capsal', v: c.sal });
+        if (c.share) p.push({ t: c.share < 0 ? 'capshl' : 'capsh', v: c.share });
+        if (c.drw) p.push({ t: 'capdrw', v: -c.drw });
+        L.push({ t: 'cap', name: c.name, own: owners[c.k] && owners[c.k].row, v: c.close, parts: p });
+      });
+      /* capital not in a partner's account (an old 'Capital' line, earlier profit) and any gap between the two profit figures */
+      var rest = r2(otherCap + res), q = [];
+      list.forEach(function (o) { if (!inF[o.k]) rest = r2(rest + o.open + o.add - o.drw); });
+      if (rest) q.push({ t: 'capopen', v: rest });
+      var gap = r2(net - num(opt.firm.appr && opt.firm.appr.profit));
+      if (gap) q.push({ t: gap < 0 ? 'capnl' : 'capnp', v: gap });
+      otherDrw.forEach(function (y) { q.push({ t: 'capdrw', row: y.row, v: -y.v }); });
+      if (q.length && r2(sum(q))) L.push({ t: 'capo', v: sum(q), parts: q });
+    } else if (list.length <= 1) {
       var o1 = list[0] || { k: '', name: '', open: 0, add: 0, drw: 0 };
       var parts = [{ t: 'capopen', v: r2(o1.open + otherCap + res) }];
       if (o1.add) parts.push({ t: 'capadd', v: o1.add });

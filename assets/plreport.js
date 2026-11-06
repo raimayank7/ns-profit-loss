@@ -64,6 +64,7 @@
     if (r.k === 'trec' || r.k === 'tpay') return t('pl.l_' + r.k, { n: r.n });
     if (r.k === 'gst') return t(r.dr ? 'pl.l_gstin' : 'pl.l_gstout');
     if (r.k === 'res-earlier') return t(r.cr ? 'pl.l_earlierp' : 'pl.l_earlierl');
+    if (r.k === 'opening') return t('fx.l_opening');
     return LBL[r.k] ? t('pl.l_' + LBL[r.k]) : r.name;
   }
   function amt(r) { return CRH[r.g] ? r2(r.cr - r.dr) : r2(r.dr - r.cr); }
@@ -94,14 +95,14 @@
       '<div class="sb-print">' + sheetPY(C) + '</div>';
   }
   function tr(label, v, cls, sub) { return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><th scope="row" class="l' + (sub ? ' sub' : '') + '">' + esc(label) + '</th><td class="n">' + (v == null ? '' : money(v, false)) + '</td></tr>'; }
-  function subs(C, g, neg) { return C.rows.filter(function (r) { return r.g === g; }).map(function (r) { return tr(nm(r), neg ? -amt(r) : amt(r), '', 1); }).join(''); }
+  function subs(C, g, neg) { return P.gstNet(C.rows).filter(function (r) { return r.g === g; }).map(function (r) { return tr(nm(r), neg ? -amt(r) : amt(r), '', 1); }).join(''); }
   function hd(g, v, C, neg) { return tr(t('pl.g_' + g), v, 'b') + (C.rows.filter(function (r) { return r.g === g; }).length > 1 || g === 'oth' || g === 'emp' ? subs(C, g, neg) : ''); }
   function plHtml(C) {
     var L = C.F.pl, p = C.p;
     return '<h3>' + esc(t('pl.plfor', { a: NS.fmtDate(p.from), b: NS.fmtDate(p.to) })) + '</h3><div class="tbl-wrap"><table class="tbl pl-st"><thead><tr><th class="l">' + esc(t('sb.part')) + '</th><th class="n">' + esc(t('pl.amt')) + '</th></tr></thead><tbody>' +
       hd('rev', L.rev, C) + hd('oinc', L.oinc, C) + tr(t('pl.income'), L.income, 'tot') +
       '<tr class="sec"><th colspan="2" class="l">' + esc(t('pl.expenses')) + '</th></tr>' +
-      (L.mat ? hd('mat', L.mat, C) : '') + hd('pur', L.pur, C) + tr(t('pl.chg'), L.chg, 'b') + tr(t('pl.l_osk'), C.os, '', 1) + tr(t('pl.lesscs'), -C.cs, '', 1) +
+      (L.mat ? hd('mat', L.mat, C) : '') + hd('pur', L.pur, C) + tr(t('pl.chg'), L.chg, 'b') + tr(t('pl.l_osk'), C.os, '', 1) + tr(t('pl.lesscs'), C.cs, '', 1) +
       hd('emp', L.emp, C) + hd('fin', L.fin, C) + hd('dep', L.dep, C) + hd('oth', L.oth, C) + tr(t('pl.totexp'), L.exp, 'tot') +
       tr(t('pl.pbt'), L.pbt, 'tot') + (L.tax ? hd('tax', L.tax, C) : '') + tr(t(L.profit < 0 ? 'pl.loss' : 'pl.profit'), Math.abs(L.profit), 'tot big') + '</tbody></table></div>' +
       '<p class="sb-note">' + esc(t('pl.grossh', { g: money(L.gross) })) + '</p>';
@@ -143,13 +144,13 @@
      row by row (rows only last year had go in at their place). Typed lines belong to this period only, so a statement made
      from typed lines alone has no previous year (—). */
   function prevCalc(C) {
-    var r = P.prevYear(C.p.from, C.p.to), pl = cur !== 'bs';
+    var r = P.prevYear(C.p.from, C.p.to, cur === 'bs'), pl = cur !== 'bs';
     var has = W.src === 'books' && D().some(function (d) { return d.date && d.date <= r[1] && (!pl || d.date >= r[0]) && (NSBooks.role(d) || d.type === 'stk'); });
-    if (!has) return { r: r };
+    if (!has) return { r: r, bs: !pl };
     var base = P.fromBooks(D(), NSB.data().item, NSB.bizName(), r[0], r[1], { map: headMap() });
     var rows = base.rows.map(function (x) { return W.heads[x.k] ? Object.assign({}, x, { g: W.heads[x.k] }) : x; });
     rows.sort(function (a, b) { return P.ORDER.indexOf(a.g) - P.ORDER.indexOf(b.g); });
-    return { r: r, C: { p: { from: r[0], to: r[1] }, rows: rows, os: base.os, cs: base.cs, F: P.statements(rows, base.cs) } };
+    return { r: r, bs: !pl, C: { p: { from: r[0], to: r[1] }, rows: rows, os: base.os, cs: base.cs, F: P.statements(rows, base.cs) } };
   }
   function rowKey(tr) {   /* class and label; the profit or loss line matches whichever word it has */
     var c = tr.firstElementChild, x = c ? c.textContent.trim().replace(/\s+/g, ' ') : '';
@@ -176,6 +177,7 @@
   }
   function pyNote(pr, en) {
     var a = NS.fmtDate(pr.r[0]), b = NS.fmtDate(pr.r[1]);
+    if (pr.bs) return en ? (pr.C ? 'Previous year: as at ' + b + ', the last year end, from the saved records.' : 'Previous year (as at ' + b + '): no records, shown as —.') : t(pr.C ? 'fx.pybs' : 'fx.pybsnone', { b: b });
     return en ? (pr.C ? 'Previous year: ' + a + ' to ' + b + ', the same dates one year earlier, from the saved records.' : 'Previous year (' + a + ' to ' + b + '): no records, shown as —.')
       : t(pr.C ? 'tbs.pyh' : 'tbs.pynone', { a: a, b: b });
   }
@@ -192,11 +194,14 @@
   /* print sheet: profit and loss and balance sheet (the first two tables) with the previous year column */
   function sheetPY(C) {
     if (tfOn()) return sheet(C);   /* the T format sheet has no previous year column */
-    var html = sheet(C), save = cur, pr; cur = 'pl'; pr = prevCalc(C); cur = save;
-    var box = document.createElement('div'), old = document.createElement('div'); box.innerHTML = html;
-    if (pr.C) old.innerHTML = sheet(pr.C);
-    var ta = box.querySelectorAll('table'), tb = pr.C ? old.querySelectorAll('table') : [];
-    for (var i = 0; i < 2 && ta[i]; i++) { pyTable(ta[i], tb[i] || null, ['Current year (₹)', 'Previous year (₹)']); ta[i].insertAdjacentHTML('afterend', '<p class="soft">' + esc(pyNote(pr, 1)) + '</p>'); }
+    var html = sheet(C), save = cur, pr = []; cur = 'pl'; pr[0] = prevCalc(C); cur = 'bs'; pr[1] = prevCalc(C); cur = save;   /* the balance sheet compares the last year end */
+    var box = document.createElement('div'); box.innerHTML = html;
+    var ta = box.querySelectorAll('table');
+    for (var i = 0; i < 2 && ta[i]; i++) {
+      var old = document.createElement('div'); if (pr[i].C) old.innerHTML = sheet(pr[i].C);
+      var tb = pr[i].C ? old.querySelectorAll('table') : [];
+      pyTable(ta[i], tb[i] || null, ['Current year (₹)', 'Previous year (₹)']); ta[i].insertAdjacentHTML('afterend', '<p class="soft">' + esc(pyNote(pr[i], 1)) + '</p>');
+    }
     return box.innerHTML;
   }
 
@@ -205,7 +210,7 @@
   function tfFigs(C) {
     var R = NSTF.tradingPL(C.rows, C.cs, NSTFV.dx(NSB.cfg())), open = {}, books = W.src === 'books';
     if (books && C.p.from) { var acc = NSBooks.accounts(D(), NSB.bizName(), P.prevDay(C.p.from)); Object.keys(acc).forEach(function (k) { if (k.indexOf('cap:') === 0) open[k] = -acc[k]; }); }
-    return { R: R, B: NSTF.balanceSheet(C.rows, C.cs, R.net, { capOpen: open, dep: books ? NSTF.depOf(D(), C.p.from, C.p.to) : {} }) };
+    return { R: R, B: NSTF.balanceSheet(P.gstNet(C.rows), C.cs, R.net, { capOpen: open, dep: books ? NSTF.depOf(D(), C.p.from, C.p.to) : {} }) };
   }
   function tfName(r, en) {   /* the App's expense heads saved as codes (power, rent ...) get their names; owners as typed */
     if (/^(cap|drw):/.test(r.k)) { var jl = []; D().forEach(function (d) { if (d.type === 'jv') jl = jl.concat(d.lines || []); }); var hit = jl.filter(function (l) { return l.a === r.k && l.nm; })[0]; if (hit) return String(hit.nm).trim(); }
@@ -221,7 +226,7 @@
     var F = tfFigs(C), p = C.p;
     if (cur === 'bs') return '<h3>' + esc(t('tf.bsat', { d: NS.fmtDate(p.to) })) + '</h3><div class="tbl-wrap">' + NSTFV.html(F.B, 'bs', { name: tfName }) + '</div><p class="sb-note">' + esc(t('tf.bsnote')) + '</p>';
     return '<h3>' + esc(t('tf.plfor', { a: NS.fmtDate(p.from), b: NS.fmtDate(p.to) })) + '</h3><div class="tbl-wrap">' + NSTFV.html(F.R, 'tpl', { name: tfName }) + '</div>' +
-      '<p class="sb-note">' + esc(t('tf.gpnote', { g: money(F.R.gross), d: money(F.R.direct) })) + ' <a href="' + esc(NSB.myUrl('#settings')) + '">' + esc(t('tf.dxchg')) + ' ›</a></p>';
+      '<p class="sb-note">' + esc(F.R.gross < 0 ? t('fx.gpnotel', { g: money(-F.R.gross), d: money(F.R.direct) }) : t('tf.gpnote', { g: money(F.R.gross), d: money(F.R.direct) })) + ' <a href="' + esc(NSB.myUrl('#settings')) + '">' + esc(t('tf.dxchg')) + ' ›</a></p>';
   }
   /* English print sheet in the T format: trading and P&L, balance sheet, then the trial balance page of the vertical sheet */
   function tfSheet(C) {
@@ -329,7 +334,7 @@
     var sw = $('[data-tffmt]', pane); if (sw) sw.addEventListener('click', function (e) {
       var b = e.target.closest('[data-f]'); if (!b || b.getAttribute('aria-pressed') === 'true') return;
       var f = b.getAttribute('data-f');
-      NSStore.meta('settings').then(function (s) { s = s || {}; s.tf = Object.assign({}, s.tf, { fmt: f }); NSB.cfg().tf = s.tf; return NSStore.meta('settings', s); })
+      NS.cfgEdit(NSB.biz() && NSB.biz().id || '', function (s) { s.tf = Object.assign({}, s.tf, { fmt: f }); NSB.cfg().tf = s.tf; })
         .then(function () { NS.toast(t('tf.fmtsaved')); show(); });
     });
     if (cv) cv.addEventListener('click', function () {

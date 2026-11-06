@@ -13,12 +13,14 @@
     sales: 'By Sales', salg: 'Sales', sret: 'Less: Sales returns', csk: 'By Closing stock', glcd: 'By Gross loss c/d', glbd: 'To Gross loss b/d', indh: 'To Indirect expenses',
     np: 'To Net profit (transferred to capital account)', gpbd: 'By Gross profit b/d', nl: 'By Net loss (transferred to capital account)',
     cap: 'Capital account', capn: 'Capital account: {n}', capu: 'Profit and loss account (not yet divided between partners)', capopen: 'Opening balance', capadd: 'Add: Capital brought in',
-    capnp: 'Add: Net profit', capnl: 'Less: Net loss', capdrw: 'Less: Drawings', loans: 'Loans (long term)', stl: 'Short-term loans and bank overdraft', cred: 'Sundry creditors',
+    capnp: 'Add: Net profit', capnl: 'Less: Net loss', capdrw: 'Less: Drawings', capint: 'Add: Interest on capital', capsal: 'Add: Salary (remuneration)',
+    capsh: 'Add: Share of profit', capshl: 'Less: Share of loss', capo: 'Other capital and profit of earlier periods',
+    npa: 'To Net profit (transferred to P&L appropriation account)', nla: 'By Net loss (transferred to P&L appropriation account)', loans: 'Loans (long term)', stl: 'Short-term loans and bank overdraft', cred: 'Sundry creditors',
     duty: 'Duties and taxes', ocl: 'Other current liabilities', fa: 'Fixed assets', fadepx: '{n} (cost {g} less depreciation {d})', inv: 'Investments', cskb: 'Closing stock',
     debt: 'Sundry debtors', cash: 'Cash in hand', chq: 'Cheques in hand', bank: 'Bank', adv: 'Loans and advances', gstin: 'GST input credit', tdsr: 'TDS receivable',
     to: 'To {x}', by: 'By {x}', diff: 'Difference (trial balance does not agree)', total: 'Total', part: 'Particulars', amt: 'Amount (Rs)', dr: 'Dr.', cr: 'Cr.',
     liab: 'Liabilities', assets: 'Assets', t_tpl: 'Trading and Profit and Loss Account', t_bs: 'Balance Sheet', trd: 'Trading account', pla: 'Profit and loss account' };
-  var LESS = { pret: 1, sret: 1, capdrw: 1, fadep: 1, capnl: 1 };
+  var LESS = { pret: 1, sret: 1, capdrw: 1, fadep: 1, capnl: 1, capshl: 1 };
   /* groups that name their only account after a colon: "Loans (long term): HDFC Bank" */
   var NAMED = { loans: 1, stl: 1, inv: 1, adv: 1, duty: 1, ocl: 1 };
 
@@ -37,6 +39,7 @@
     if (x.t === 'capdrw' && x.row) return w('capdrw', o) + ' (' + nm(x.row, o) + ')';
     if (x.t === 'cap') { var on = x.own ? nm(x.own, o) : x.name; return on ? w('capn', o, { n: on }) : w('cap', o); }
     if (x.t === 'csk' && ctx === 'bs') return w('cskb', o);
+    if (o.firm && (x.t === 'np' || x.t === 'nl')) return w(x.t + 'a', o);   /* a firm: the net profit or loss goes to the appropriation account */
     if (NAMED[x.t] && x.row && !x.parts) return w(x.t, o) + ': ' + nm(x.row, o);
     return w(x.t, o);
   }
@@ -89,8 +92,8 @@
     return '<div class="tf-box">' + wide + narrow + '</div>';
   }
   /* spreadsheet rows (English): one row per line, both sides side by side */
-  function rows(R, ctx) {
-    var o = { en: true }, H = heads(ctx, o), out = [[H[0], '', '', H[1], '', ''], [EN.part, 'Rs', 'Rs', EN.part, 'Rs', 'Rs']];
+  function rows(R, ctx, oo) {
+    var o = { en: true, firm: !!(oo && oo.firm) }, H = heads(ctx, o), out = [[H[0], '', '', H[1], '', ''], [EN.part, 'Rs', 'Rs', EN.part, 'Rs', 'Rs']];
     function c(r) { return r ? [(r.c === 'sub' ? '    ' : '') + r.l, r.i == null ? '' : r.i, r.v == null ? '' : r.v] : ['', '', '']; }
     sides(R, ctx, o).forEach(function (p) {
       if (p.h) out.push([p.h, '', '', '', '', '']);
