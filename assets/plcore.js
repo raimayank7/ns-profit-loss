@@ -38,7 +38,9 @@
   }
   function isPL(a) { return a === 'sales' || a === 'sales-return' || a === 'purchases' || a === 'purchase-return' || a === 'round-off' || a.indexOf('exp:') === 0 || a.indexOf('inc:') === 0; }
   /* accounts of journal entries and the fixed assets register (Batch 2): prefix -> head */
-  var PREFIX = { 'fa:': 'ppe', 'loan:': 'ltb', 'od:': 'stb', 'given:': 'oca', 'cap:': 'cap', 'drw:': 'drw', 'ocl:': 'ocl', 'oca:': 'oca' };
+  var PREFIX = { 'fa:': 'ppe', 'loan:': 'ltb', 'od:': 'stb', 'given:': 'oca', 'cap:': 'cap', 'drw:': 'drw', 'ocl:': 'ocl', 'oca:': 'oca', 'sadv:': 'oca' };
+  /* name of a prefixed account: an advance to staff names the employee (WP-5), the rest the name as typed */
+  function pxName(a, px) { var n = a.slice(px.length); return px === 'sadv:' ? (n === 'staff' ? 'Advance to staff' : 'Advance to ' + cap1(n)) : cap1(n); }
   /* GST ledgers, one trial balance line each like Tally (user test 2026-11-06); on the balance sheet they stay one net figure:
      every GST line takes the head of their net balance (input credit 'oca' or payable 'ocl') */
   var GSTN = { 'gst-in-cgst': 'Input CGST', 'gst-in-sgst': 'Input SGST', 'gst-in-utgst': 'Input UTGST', 'gst-in-igst': 'Input IGST', 'gst-out-cgst': 'Output CGST', 'gst-out-sgst': 'Output SGST',
@@ -68,7 +70,8 @@
   var NAMES = { sales: ['Sales', 'rev'], 'sales-return': ['Sales returns', 'rev'], purchases: ['Purchases', 'pur'], 'purchase-return': ['Purchase returns', 'pur'],
     cash: ['Cash in hand', 'cash'], bank: ['Bank', 'cash'], 'chq-in': ['Cheques in hand', 'cash'], 'chq-out': ['Cheques issued, not yet cleared', 'ocl'],
     'tds-receivable': ['TDS receivable', 'oca'], 'tds-payable': ['TDS payable', 'ocl'], 'tcs-receivable': ['TCS receivable', 'oca'], 'tcs-payable': ['TCS payable', 'ocl'],
-    pdd: ['Less: provision for doubtful debts', 'trec'],   /* WP-3: shown as less from trade receivables */
+    pdd: ['Less: provision for doubtful debts', 'trec'],
+    'sal-payable': ['Salary payable', 'ocl'], 'pf-payable': ['PF payable', 'ocl'], 'esi-payable': ['ESI payable', 'ocl'], 'pt-payable': ['Professional tax payable', 'ocl'],   /* WP-5 */   /* WP-3: shown as less from trade receivables */
     'gstcash-igst': ['GST electronic cash ledger: IGST', 'oca'], 'gstcash-cgst': ['GST electronic cash ledger: CGST', 'oca'], 'gstcash-sgst': ['GST electronic cash ledger: SGST/UTGST', 'oca'], 'gstcash-cess': ['GST electronic cash ledger: cess', 'oca'], opening: ['Opening balances (difference carried to capital)', 'cap'] };   /* opening cash, bank and party balances typed in (user test 2026-11-06: not only parties) */
 
   /* trial balance from the saved records. opt: { os, cs } typed opening / closing stock (else from the stock register), map (expense heads) */
@@ -97,7 +100,7 @@
       if (a.indexOf('p:') === 0) { if (u > 0) { rec += u; nr++; } else { pay -= u; np++; } return; }
       if (/^gst-/.test(a)) { gst += u; gstL.push([a, u]); return; }
       var px = Object.keys(PREFIX).filter(function (x) { return a.indexOf(x) === 0; })[0];
-      if (px) { rows.push(line(a, cap1(a.slice(px.length)), PREFIX[px], u)); return; }
+      if (px) { rows.push(line(a, pxName(a, px), PREFIX[px], u)); return; }
       /* a bank account in credit is an overdraft: a short-term borrowing (Schedule III), not a negative asset (round C) */
       if (a === 'bank' && u < 0) rows.push(line(a, 'Bank overdraft', 'stb', u));
       else if (NAMES[a]) rows.push(line(a, NAMES[a][0], NAMES[a][1], u));
@@ -208,7 +211,7 @@
         return;
       } else {
         var h = base.rows.filter(function (r) { return r.k === a; })[0], px = Object.keys(PREFIX).filter(function (p) { return a.indexOf(p) === 0; })[0];
-        h = h || line(a, px ? cap1(a.slice(px.length)) : NAMES[a] ? NAMES[a][0] : a, px ? PREFIX[px] : NAMES[a] ? NAMES[a][1] : b0 >= 0 ? 'oca' : 'ocl', 0);
+        h = h || line(a, px ? pxName(a, px) : NAMES[a] ? NAMES[a][0] : a, px ? PREFIX[px] : NAMES[a] ? NAMES[a][1] : b0 >= 0 ? 'oca' : 'ocl', 0);
         add(h, b0, x.dr, x.cr); return;
       }
       var s = agg[g] = agg[g] || { o: 0, td: 0, tc: 0, n: 0 }; s.o += b0; s.td += x.dr; s.tc += x.cr; if (r2(u)) s.n++;
