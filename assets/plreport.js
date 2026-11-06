@@ -76,7 +76,7 @@
     var setup = NSB.periodBar(SITE) + '<div class="sb-period"><div class="f"><label for="pl-src">' + esc(t('pl.src')) + '</label><select id="pl-src"><option value="books"' + (W.src === 'books' ? ' selected' : '') + '>' + esc(t('pl.src_books')) + '</option><option value="typed"' + (W.src === 'typed' ? ' selected' : '') + '>' + esc(t('pl.src_typed')) + '</option></select></div>' +
       '<div class="f"><label for="pl-os">' + esc(t('pl.os', { d: NS.fmtDate(p.from) })) + '</label><input id="pl-os" inputmode="decimal" value="' + esc(W.os == null ? '' : W.os) + '" placeholder="' + esc(W.src === 'books' ? money(C.os, false) : '0') + '"></div>' +
       '<div class="f"><label for="pl-cs">' + esc(t('pl.cs', { d: NS.fmtDate(p.to) })) + '</label><input id="pl-cs" inputmode="decimal" value="' + esc(W.cs == null ? '' : W.cs) + '" placeholder="' + esc(W.src === 'books' ? money(C.cs, false) : '0') + '"></div></div>' +
-      '<p class="hint">' + esc(t(W.src === 'books' ? 'pl.stockh' : 'pl.typedh')) + '</p>';
+      '<p class="hint">' + esc(t(W.src === 'books' ? 'pl.stockh' : 'pl.typedh')) + (W.src === 'books' ? ' ' + esc(t('pl.stockh2')) : '') + '</p>';   /* round C: what the App already posted is in; typing it again counts it twice */
     var ok = Math.abs(F.tb.diff) < 0.005;
     var tiles = '<div class="tiles"><div class="tile"><span>' + esc(t('pl.k_rev')) + '</span><b>' + money(F.pl.rev) + '</b></div><div class="tile"><span>' + esc(t('pl.k_gross')) + '</span><b>' + money(tfOn() ? tfFigs(C).R.gross : F.pl.gross) + '</b></div>' +
       '<div class="tile' + (F.pl.profit < 0 ? ' neg' : ' ok') + '"><span>' + esc(t(F.pl.profit < 0 ? 'pl.k_loss' : 'pl.k_profit')) + '</span><b>' + money(Math.abs(F.pl.profit)) + '</b></div>' +
@@ -107,6 +107,11 @@
       tr(t('pl.pbt'), L.pbt, 'tot') + (L.tax ? hd('tax', L.tax, C) : '') + tr(t(L.profit < 0 ? 'pl.loss' : 'pl.profit'), Math.abs(L.profit), 'tot big') + '</tbody></table></div>' +
       '<p class="sb-note">' + esc(t('pl.grossh', { g: money(L.gross) })) + '</p>';
   }
+  /* WP-3: trade receivables before the provision for doubtful debts, and the provision taken off */
+  function pddHtml(C, row) {
+    var p = C.rows.filter(function (x) { return x.k === 'pdd'; })[0], v = p ? NS.r2(NS.num(p.cr) - NS.num(p.dr)) : 0;
+    return v ? row('wo.l_gross', 'Before provision', NS.r2(C.F.bs.trec + v)) + row('wo.l_pdd', 'Less: provision for doubtful debts', -v) : '';
+  }
   function bsHtml(C) {
     var S = C.F.bs;
     return '<h3>' + esc(t('pl.bsat', { d: NS.fmtDate(C.p.to) })) + '</h3><div class="tbl-wrap"><table class="tbl pl-st"><thead><tr><th class="l">' + esc(t('sb.part')) + '</th><th class="n">' + esc(t('pl.amt')) + '</th></tr></thead><tbody>' +
@@ -117,7 +122,7 @@
       tr(t('pl.total'), S.el, 'tot') +
       '<tr class="sec"><th colspan="2" class="l">' + esc(t('pl.assets')) + '</th></tr>' +
       (S.nca ? tr(t('pl.nca'), S.nca, 'b') + (S.ppe ? tr(t('pl.g_ppe'), S.ppe, '', 1) : '') + (S.ninv ? tr(t('pl.g_ninv'), S.ninv, '', 1) : '') : '') +
-      tr(t('pl.ca'), S.ca, 'b') + tr(t('pl.inv'), S.inv, '', 1) + tr(t('pl.g_trec'), S.trec, '', 1) + tr(t('pl.g_cash'), S.cash, '', 1) + tr(t('pl.g_oca'), S.oca, '', 1) +
+      tr(t('pl.ca'), S.ca, 'b') + tr(t('pl.inv'), S.inv, '', 1) + tr(t('pl.g_trec'), S.trec, '', 1) + pddHtml(C, function (k, en, v) { return tr(t(k), v, '', 1); }) + tr(t('pl.g_cash'), S.cash, '', 1) + tr(t('pl.g_oca'), S.oca, '', 1) +
       tr(t('pl.total'), S.assets, 'tot') + (Math.abs(S.diff) >= 0.005 ? tr(t('pl.bsdiff'), S.diff, 'bad') : '') + '</tbody></table></div>' +
       '<p class="sb-note">' + esc(t('pl.bsh')) + '</p>';
   }
@@ -255,7 +260,7 @@
       r('EQUITY AND LIABILITIES', null, 'b') + r("Owner's funds", S.own, 'b') + lines('cap') + (S.drw ? r('   Less: drawings', -S.drw, 's') : '') + r('   ' + EN_H.res + ' (including profit for the period)', S.res, 's') +
       (S.ltb ? r('Non-current liabilities: ' + EN_H.ltb, S.ltb, 'b') : '') + r('Current liabilities', S.cl, 'b') + (S.stb ? r('   ' + EN_H.stb, S.stb, 's') : '') + r('   ' + EN_H.tpay, S.tpay, 's') + r('   ' + EN_H.ocl, S.ocl, 's') +
       r('Total', S.el, 'b') + r('ASSETS', null, 'b') + (S.nca ? r('Non-current assets', S.nca, 'b') + (S.ppe ? r('   ' + EN_H.ppe, S.ppe, 's') : '') + (S.ninv ? r('   ' + EN_H.ninv, S.ninv, 's') : '') : '') +
-      r('Current assets', S.ca, 'b') + r('   Inventories', S.inv, 's') + r('   ' + EN_H.trec, S.trec, 's') + r('   ' + EN_H.cash, S.cash, 's') + r('   ' + EN_H.oca, S.oca, 's') + r('Total', S.assets, 'b') +
+      r('Current assets', S.ca, 'b') + r('   Inventories', S.inv, 's') + r('   ' + EN_H.trec, S.trec, 's') + pddHtml(C, function (k, en, v) { return r('      ' + en, v, 's'); }) + r('   ' + EN_H.cash, S.cash, 's') + r('   ' + EN_H.oca, S.oca, 's') + r('Total', S.assets, 'b') +
       (Math.abs(S.diff) >= 0.005 ? r('Difference (trial balance does not agree)', S.diff, 'b') : '') + '</tbody></table>' +
       '<div class="pb"></div>' + top('Trial balance as at ' + NS.fmtDate(p.to)) +
       '<table class="tbl"><thead><tr><th>Account</th><th>Head</th><th class="n">Debit (₹)</th><th class="n">Credit (₹)</th></tr></thead><tbody>' +

@@ -17,7 +17,7 @@
     capsh: 'Add: Share of profit', capshl: 'Less: Share of loss', capo: 'Other capital and profit of earlier periods',
     npa: 'To Net profit (transferred to P&L appropriation account)', nla: 'By Net loss (transferred to P&L appropriation account)', loans: 'Loans (long term)', stl: 'Short-term loans and bank overdraft', cred: 'Sundry creditors',
     duty: 'Duties and taxes', ocl: 'Other current liabilities', fa: 'Fixed assets', fadepx: '{n} (cost {g} less depreciation {d})', inv: 'Investments', cskb: 'Closing stock',
-    debt: 'Sundry debtors', cash: 'Cash in hand', chq: 'Cheques in hand', bank: 'Bank', adv: 'Loans and advances', gstin: 'GST input credit', tdsr: 'TDS receivable',
+    debt: 'Sundry debtors', debtpdd: 'Sundry debtors {g} less provision for doubtful debts {d}', cash: 'Cash in hand', chq: 'Cheques in hand', bank: 'Bank', adv: 'Loans and advances', gstin: 'GST input credit', tdsr: 'TDS receivable',
     to: 'To {x}', by: 'By {x}', diff: 'Difference (trial balance does not agree)', total: 'Total', part: 'Particulars', amt: 'Amount (Rs)', dr: 'Dr.', cr: 'Cr.',
     liab: 'Liabilities', assets: 'Assets', t_tpl: 'Trading and Profit and Loss Account', t_bs: 'Balance Sheet', trd: 'Trading account', pla: 'Profit and loss account' };
   var LESS = { pret: 1, sret: 1, capdrw: 1, fadep: 1, capnl: 1, capshl: 1 };
@@ -39,6 +39,7 @@
     if (x.t === 'capdrw' && x.row) return w('capdrw', o) + ' (' + nm(x.row, o) + ')';
     if (x.t === 'cap') { var on = x.own ? nm(x.own, o) : x.name; return on ? w('capn', o, { n: on }) : w('cap', o); }
     if (x.t === 'csk' && ctx === 'bs') return w('cskb', o);
+    if (x.t === 'debt' && x.pdd) return w('debtpdd', o, { g: m(x.gross), d: m(x.pdd) });   /* WP-3 */
     if (o.firm && (x.t === 'np' || x.t === 'nl')) return w(x.t + 'a', o);   /* a firm: the net profit or loss goes to the appropriation account */
     if (NAMED[x.t] && x.row && !x.parts) return w(x.t, o) + ': ' + nm(x.row, o);
     return w(x.t, o);
@@ -68,7 +69,8 @@
     }
     return parts;
   }
-  function heads(ctx, o) { return ctx === 'bs' ? [w('liab', o), w('assets', o)] : [w('dr', o), w('cr', o)]; }
+  /* "Dr." / "Cr." keep their dot at the end in right-to-left screens (round C: ".Dr") */
+  function heads(ctx, o) { return ctx === 'bs' ? [w('liab', o), w('assets', o)] : [w('dr', o), w('cr', o)].map(function (s) { return /^[A-Za-z]+\.$/.test(s) ? '\u2066' + s + '\u2069' : s; }); }
   function cells(r) { return r ? '<th scope="row" class="l' + (r.c === 'sub' ? ' sub' : '') + '">' + esc(r.l) + '</th><td class="n i">' + m(r.i) + '</td><td class="n">' + m(r.v) + '</td>' : '<td></td><td></td><td></td>'; }
   function html(R, ctx, o) {
     o = o || {};
@@ -106,10 +108,13 @@
   var CODE_EN = { transport: 'Transport and freight', fuel: 'Fuel', rent: 'Rent', power: 'Electricity', salary: 'Salary and wages', phone: 'Phone and internet', repair: 'Repairs and maintenance',
     office: 'Office expenses', bank: 'Bank charges', prof: 'Professional fees', ads: 'Advertising', misc: 'Miscellaneous' };
   function key(s) { return String(s || '').trim().toLowerCase().replace(/\s+/g, ' '); }
-  function dx(settings) {
+  /* a manufacturer's power, fuel, wages and carriage are factory costs: direct by default, the same rule the AS 2 full cost and
+     the manufacturing account use, so every screen shows one gross profit (round C) */
+  var MAKER = { power: 1, salary: 1, fuel: 1, transport: 1 };
+  function dx(settings, maker) {
     var o = {};
     Object.keys(CODE_EN).forEach(function (c) {
-      var d = TF.defaultDirect('exp:' + c, CODE_EN[c]);
+      var d = maker && MAKER[c] ? true : TF.defaultDirect('exp:' + c, CODE_EN[c]);
       o['exp:' + c] = d; o['exp:' + key(CODE_EN[c])] = d; o['exp:' + key(NS.t('app.ex_' + c))] = d;
     });
     return Object.assign(o, settings && settings.tf && settings.tf.dx || {});

@@ -25,6 +25,8 @@
   function headOf(name, map) {
     var k = key(name);
     if (map && map[k]) return map[k];
+    var H = G.NSHeads || (typeof NSHeads !== 'undefined' ? NSHeads : null), hh = H && H.find(name);   /* the income and expense heads list (heads.js) */
+    if (hh && !H.isIncome(hh)) return hh.s3;
     if (/advance|deposit|loan to/.test(k)) return 'oca';
     if (/salar|wage|staff|bonus|provident|\bpf\b|\besi\b|gratuity|employee/.test(k)) return 'emp';
     if (/\bemi\b|loan repay/.test(k)) return 'ltb';   /* an EMI mostly pays back the loan; its interest part is a finance cost */
@@ -65,7 +67,9 @@
 
   var NAMES = { sales: ['Sales', 'rev'], 'sales-return': ['Sales returns', 'rev'], purchases: ['Purchases', 'pur'], 'purchase-return': ['Purchase returns', 'pur'],
     cash: ['Cash in hand', 'cash'], bank: ['Bank', 'cash'], 'chq-in': ['Cheques in hand', 'cash'], 'chq-out': ['Cheques issued, not yet cleared', 'ocl'],
-    'tds-receivable': ['TDS receivable', 'oca'], 'tds-payable': ['TDS payable', 'ocl'], opening: ['Opening balances (difference carried to capital)', 'cap'] };   /* opening cash, bank and party balances typed in (user test 2026-11-06: not only parties) */
+    'tds-receivable': ['TDS receivable', 'oca'], 'tds-payable': ['TDS payable', 'ocl'], 'tcs-receivable': ['TCS receivable', 'oca'], 'tcs-payable': ['TCS payable', 'ocl'],
+    pdd: ['Less: provision for doubtful debts', 'trec'],   /* WP-3: shown as less from trade receivables */
+    'gstcash-igst': ['GST electronic cash ledger: IGST', 'oca'], 'gstcash-cgst': ['GST electronic cash ledger: CGST', 'oca'], 'gstcash-sgst': ['GST electronic cash ledger: SGST/UTGST', 'oca'], 'gstcash-cess': ['GST electronic cash ledger: cess', 'oca'], opening: ['Opening balances (difference carried to capital)', 'cap'] };   /* opening cash, bank and party balances typed in (user test 2026-11-06: not only parties) */
 
   /* trial balance from the saved records. opt: { os, cs } typed opening / closing stock (else from the stock register), map (expense heads) */
   function fromBooks(docs, items, biz, from, to, opt) {
@@ -94,7 +98,9 @@
       if (/^gst-/.test(a)) { gst += u; gstL.push([a, u]); return; }
       var px = Object.keys(PREFIX).filter(function (x) { return a.indexOf(x) === 0; })[0];
       if (px) { rows.push(line(a, cap1(a.slice(px.length)), PREFIX[px], u)); return; }
-      if (NAMES[a]) rows.push(line(a, NAMES[a][0], NAMES[a][1], u));
+      /* a bank account in credit is an overdraft: a short-term borrowing (Schedule III), not a negative asset (round C) */
+      if (a === 'bank' && u < 0) rows.push(line(a, 'Bank overdraft', 'stb', u));
+      else if (NAMES[a]) rows.push(line(a, NAMES[a][0], NAMES[a][1], u));
       else rows.push(line(a, a, u > 0 ? 'oca' : 'ocl', u));
     });
     if (r2(rec)) { var x = line('trec', 'Trade receivables (customers who owe you)', 'trec', rec); x.n = nr; rows.push(x); }
