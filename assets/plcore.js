@@ -42,7 +42,7 @@
   /* GST ledgers, one trial balance line each like Tally (user test 2026-11-06); on the balance sheet they stay one net figure:
      every GST line takes the head of their net balance (input credit 'oca' or payable 'ocl') */
   var GSTN = { 'gst-in-cgst': 'Input CGST', 'gst-in-sgst': 'Input SGST', 'gst-in-utgst': 'Input UTGST', 'gst-in-igst': 'Input IGST', 'gst-out-cgst': 'Output CGST', 'gst-out-sgst': 'Output SGST',
-    'gst-out-utgst': 'Output UTGST', 'gst-out-igst': 'Output IGST', 'gst-rcm-payable': 'GST payable on reverse charge' };
+    'gst-out-utgst': 'Output UTGST', 'gst-out-igst': 'Output IGST', 'gst-rcm-payable': 'GST payable on reverse charge', 'gst-adv': 'GST paid on advances' };
   function gstName(a) { return GSTN[a] || 'GST: ' + a.slice(4); }
   /* balance sheets show GST as one net line (input credit or payable); the trial balance keeps the ledgers */
   function gstNet(rows) {
