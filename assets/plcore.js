@@ -299,7 +299,7 @@
     return [from ? yearBack(from) : '', yearBack(to)];
   }
 
-  var API = { ORDER: ORDER, SIDE: SIDE, headOf: headOf, fromBooks: fromBooks, totals: totals, statements: statements, openStock: openStock, prevDay: prevDay, num: num, r2: r2 };
+  var API = { NAMES: NAMES, ORDER: ORDER, SIDE: SIDE, headOf: headOf, fromBooks: fromBooks, totals: totals, statements: statements, openStock: openStock, prevDay: prevDay, num: num, r2: r2 };
   API.capLoanLines = capLoanLines;
   API.gstNet = gstNet;   /* user test 2026-11-06: GST ledgers one by one in the trial balance, net on the balance sheet */   /* capital and loans (finrep.js) */
   API.tbDetail = tbDetail; API.stockOff = stockOff; API.tbGroups = tbGroups; API.tbGroupOf = tbGroupOf; API.tbTotals = tbTotals; API.TBG = TBG; API.prevYear = prevYear;   /* trial balance styles (finrep.js) */
