@@ -267,7 +267,7 @@
       C.rows.map(function (x) { return '<tr><td>' + esc(x.k === 'trec' ? 'Trade receivables (' + x.n + ' parties)' : x.k === 'tpay' ? 'Trade payables (' + x.n + ' parties)' : x.name) + '</td><td>' + esc(EN_H[x.g]) + '</td><td class="n">' + (x.dr ? money(x.dr, false) : '') + '</td><td class="n">' + (x.cr ? money(x.cr, false) : '') + '</td></tr>'; }).join('') +
       '<tr class="b"><td colspan="2">Total</td><td class="n">' + money(C.F.tb.dr, false) + '</td><td class="n">' + money(C.F.tb.cr, false) + '</td></tr></tbody></table>' +
       '<p class="soft">Closing stock ' + money(C.cs, false) + ' is shown as inventories and in the change in inventories. ' + (W.src === 'books' ? 'Figures from the records saved in Nivesh Sahayak, with typed lines.' : 'Figures typed by hand.') + ' Not audited.</p>' +
-      '<div class="st-ft">Made with Nivesh Sahayak Profit and Loss (profit-loss.niveshsahayak.in) on ' + NS.fmtDate(NS.today()) + '</div></div>';
+      NS.creditLine('st-ft') + '</div>';
   }
 
   /* ---------- typed lines ---------- */
