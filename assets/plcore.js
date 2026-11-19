@@ -36,7 +36,9 @@
     if (/income tax/.test(k)) return 'drw';   /* a proprietor's own income tax is drawings, not a business expense */
     return 'oth';
   }
-  function isPL(a) { return a === 'sales' || a === 'sales-return' || a === 'purchases' || a === 'purchase-return' || a === 'round-off' || a.indexOf('exp:') === 0 || a.indexOf('inc:') === 0; }
+  /* A-9 (r2-billwise): a named sales / purchase ledger ('sales:<name>', 'purchases:<name>') sits under Revenue / Purchases */
+  function nmOf(a) { return NAMES[a] || (a.indexOf('sales:') === 0 ? [B && B.ledName && B.ledName(a) || cap1(a.slice(6)), 'rev'] : a.indexOf('purchases:') === 0 ? [B && B.ledName && B.ledName(a) || cap1(a.slice(10)), 'pur'] : null); }
+  function isPL(a) { return /^(sales|purchases):/.test(a) || a === 'sales' || a === 'sales-return' || a === 'purchases' || a === 'purchase-return' || a === 'round-off' || a.indexOf('exp:') === 0 || a.indexOf('inc:') === 0; }
   /* accounts of journal entries and the fixed assets register (Batch 2): prefix -> head */
   var PREFIX = { 'fa:': 'ppe', 'loan:': 'ltb', 'od:': 'stb', 'given:': 'oca', 'cap:': 'cap', 'drw:': 'drw', 'ocl:': 'ocl', 'oca:': 'oca', 'sadv:': 'oca' };
   /* name of a prefixed account: an advance to staff names the employee (WP-5), the rest the name as typed */
@@ -53,7 +55,12 @@
     if (at >= 0 && r2(v)) out.splice(at, 0, line('gst', v > 0 ? 'GST input credit (net)' : 'GST payable (net)', v > 0 ? 'oca' : 'ocl', v));
     return out;
   }
-  function cap1(s) { return String(s).replace(/^./, function (c) { return c.toUpperCase(); }); }
+  var CASE = {};   /* small-letter key -> the name as typed (F2-3) */
+  function learn(docs) {
+    function put(s) { if (typeof s !== 'string' || !s.trim()) return; var k = key(s), v = s.trim().replace(/\s+/g, ' '); if (!CASE[k] || CASE[k] === CASE[k].toLowerCase()) CASE[k] = v; }
+    (docs || []).forEach(function (d) { if (!d) return; put(d.lender); put(d.name); put(d.payer); put(d.head); put(d.emp && d.emp.name); put(d.buyer && d.buyer.name); put(d.employee); (d.lines || []).forEach(function (l) { if (l) { put(l.nm); put(l.name); put(l.head); put(l.acct); } }); });
+  }
+  function cap1(s) { var c = CASE[key(s)]; s = c && c !== c.toLowerCase() ? c : String(s).replace(/^./, function (x) { return x.toUpperCase(); }); return s.replace(/\b(pf|esi|gst|tds|tcs|emi|epf|eps|lic)\b/gi, function (m) { return m.toUpperCase(); }); }
   function line(k, name, g, v, src) { v = r2(v); return { k: k, name: name, g: g, dr: v > 0 ? v : 0, cr: v < 0 ? -v : 0, src: src || 'books' }; }
   function bizOk(d, b) { return !b || key(d.seller && d.seller.name) === b; }
 
@@ -72,10 +79,11 @@
     'tds-receivable': ['TDS receivable', 'oca'], 'tds-payable': ['TDS payable', 'ocl'], 'tcs-receivable': ['TCS receivable', 'oca'], 'tcs-payable': ['TCS payable', 'ocl'],
     pdd: ['Less: provision for doubtful debts', 'trec'],
     'sal-payable': ['Salary payable', 'ocl'], 'pf-payable': ['PF payable', 'ocl'], 'esi-payable': ['ESI payable', 'ocl'], 'pt-payable': ['Professional tax payable', 'ocl'],   /* WP-5 */   /* WP-3: shown as less from trade receivables */
-    'gstcash-igst': ['GST electronic cash ledger: IGST', 'oca'], 'gstcash-cgst': ['GST electronic cash ledger: CGST', 'oca'], 'gstcash-sgst': ['GST electronic cash ledger: SGST/UTGST', 'oca'], 'gstcash-cess': ['GST electronic cash ledger: cess', 'oca'], opening: ['Opening balances (difference carried to capital)', 'cap'] };   /* opening cash, bank and party balances typed in (user test 2026-11-06: not only parties) */
+    'gstcash-igst': ['GST electronic cash ledger: IGST', 'oca'], 'gstcash-cgst': ['GST electronic cash ledger: CGST', 'oca'], 'gstcash-sgst': ['GST electronic cash ledger: SGST/UTGST', 'oca'], 'gstcash-cess': ['GST electronic cash ledger: cess', 'oca'], 'gst-itc-held': ['GST input credit held (rule 37: supplier not paid in 180 days)', 'oca'], opening: ['Opening balances (difference carried to capital)', 'cap'] };   /* opening cash, bank and party balances typed in (user test 2026-11-06: not only parties) */
 
   /* trial balance from the saved records. opt: { os, cs } typed opening / closing stock (else from the stock register), map (expense heads) */
   function fromBooks(docs, items, biz, from, to, opt) {
+    learn(docs);
     opt = opt || {};
     var before = from ? B.accounts(docs, biz, prevDay(from)) : {}, upto = B.accounts(docs, biz, to), b = key(biz);
     var heads = {}; (docs || []).forEach(function (d) {
@@ -92,8 +100,8 @@
         var v = r2(u - b0); if (!v) return;
         if (a === 'round-off') rows.push(line(a, 'Round off', v > 0 ? 'oth' : 'oinc', v));
         else if (a.indexOf('inc:') === 0) rows.push(line(a, cap1(a.slice(4)), 'oinc', v));
-        else if (a.indexOf('exp:') === 0) { var nm = heads[a.slice(4)] || a.slice(4).replace(/^./, function (c) { return c.toUpperCase(); }); rows.push(line(a, nm, headOf(nm, opt.map), v)); }
-        else rows.push(line(a, NAMES[a][0], NAMES[a][1], v));
+        else if (a.indexOf('exp:') === 0) { var nm = heads[a.slice(4)] || cap1(a.slice(4)); rows.push(line(a, nm, headOf(nm, opt.map), v)); }
+        else rows.push(line(a, nmOf(a)[0], nmOf(a)[1], v));
         return;
       }
       if (!u) return;
@@ -101,8 +109,11 @@
       if (/^gst-/.test(a)) { gst += u; gstL.push([a, u]); return; }
       var px = Object.keys(PREFIX).filter(function (x) { return a.indexOf(x) === 0; })[0];
       if (px) { rows.push(line(a, pxName(a, px), PREFIX[px], u)); return; }
-      /* a bank account in credit is an overdraft: a short-term borrowing (Schedule III), not a negative asset (round C) */
-      if (a === 'bank' && u < 0) rows.push(line(a, 'Bank overdraft', 'stb', u));
+      /* a bank account in credit is an overdraft: a short-term borrowing (Schedule III), not a negative asset (round C).
+         Several banks (ERP masters step 3): each bank account 'bank:<name>' is its own line under cash and cash equivalents */
+      var isBk = B && B.isBank ? B.isBank(a) : a === 'bank', bkNm = isBk && B.bankName ? B.bankName(a) : 'Bank';
+      if (isBk && u < 0) rows.push(line(a, bkNm === 'Bank' ? 'Bank overdraft' : 'Bank overdraft: ' + bkNm.replace(/^Bank: /, ''), 'stb', u));
+      else if (isBk) rows.push(line(a, bkNm, 'cash', u));
       else if (NAMES[a]) rows.push(line(a, NAMES[a][0], NAMES[a][1], u));
       else rows.push(line(a, a, u > 0 ? 'oca' : 'ocl', u));
     });
@@ -156,8 +167,8 @@
      givenin), lt ('loan' long term | 'od' short term, loanin) }. Interest paid goes to the finance cost 'Interest on loan',
      interest received to other income 'Interest received'. Lines with nothing on either side are left out. */
   function capLoanLines(kind, o) {
-    var amt = r2(num(o.amt)), int = r2(num(o.int)), name = String(o.name || '').trim(), M = o.mode === 'bank' ? 'bank' : 'cash', lines;
-    function m(dr, cr) { return { t: M, a: M, dr: r2(dr), cr: r2(cr) }; }
+    var amt = r2(num(o.amt)), int = r2(num(o.int)), name = String(o.name || '').trim(), M = o.mode === 'bank' ? (B && B.isBank && B.isBank(o.bank) ? o.bank : 'bank') : 'cash', lines;
+    function m(dr, cr) { return { t: M === 'cash' ? 'cash' : 'bank', a: M, dr: r2(dr), cr: r2(cr) }; }
     if (kind === 'capin') lines = [m(amt, 0), { t: 'cap', nm: name || 'Capital', a: 'cap:' + key(name || 'Capital'), dr: 0, cr: amt }];
     else if (kind === 'drw') lines = [{ t: 'drw', nm: name || 'Drawings', a: 'drw:' + key(name || 'Drawings'), dr: amt, cr: 0 }, m(0, amt)];
     else if (kind === 'loanin') lines = [m(amt, 0), { t: 'loan', nm: name, a: (o.lt === 'od' ? 'od:' : 'loan:') + key(name), dr: 0, cr: amt }];
@@ -188,6 +199,7 @@
     return m;
   }
   function tbDetail(docs, items, biz, from, to, opt) {
+    learn(docs);
     opt = opt || {};
     var base = fromBooks(docs, items, biz, from, to, opt), before = from ? B.accounts(docs, biz, prevDay(from)) : {}, upto = B.accounts(docs, biz, to);
     var M = moves(docs, biz, from, to), openIn = openStock(docs, biz, from, to), rows = [], done = {}, agg = {};
@@ -207,7 +219,7 @@
       } else if (isPL(a)) {
         var hit = base.rows.filter(function (r) { return r.k === a; })[0];
         if (hit) add(hit, 0, x.dr, x.cr);
-        else if (x.dr || x.cr) add(line(a, a.indexOf('exp:') === 0 ? cap1(a.slice(4)) : a.indexOf('inc:') === 0 ? cap1(a.slice(4)) : NAMES[a] ? NAMES[a][0] : a, a.indexOf('inc:') === 0 ? 'oinc' : a.indexOf('exp:') === 0 ? 'oth' : NAMES[a] ? NAMES[a][1] : 'oth', 0), 0, x.dr, x.cr);
+        else if (x.dr || x.cr) add(line(a, a.indexOf('exp:') === 0 ? cap1(a.slice(4)) : a.indexOf('inc:') === 0 ? cap1(a.slice(4)) : nmOf(a) ? nmOf(a)[0] : a, a.indexOf('inc:') === 0 ? 'oinc' : a.indexOf('exp:') === 0 ? 'oth' : nmOf(a) ? nmOf(a)[1] : 'oth', 0), 0, x.dr, x.cr);
         return;
       } else {
         var h = base.rows.filter(function (r) { return r.k === a; })[0], px = Object.keys(PREFIX).filter(function (p) { return a.indexOf(p) === 0; })[0];
@@ -263,7 +275,7 @@
     if (g === 'ppe') return 'gfa';
     if (g === 'ninv') return 'ginv';
     if (g === 'trec') return 'gdeb';
-    if (g === 'cash') return k === 'bank' ? 'gbank' : 'gcash';
+    if (g === 'cash') return /^bank(:|$)/.test(k) ? 'gbank' : 'gcash';
     if (g === 'oca') return 'gadv';
     if (g === 'osk') return 'gosk';
     if (g === 'rev') return 'gsales';
@@ -301,6 +313,7 @@
 
   var API = { NAMES: NAMES, ORDER: ORDER, SIDE: SIDE, headOf: headOf, fromBooks: fromBooks, totals: totals, statements: statements, openStock: openStock, prevDay: prevDay, num: num, r2: r2 };
   API.capLoanLines = capLoanLines;
+  API.proper = function (s, docs) { if (docs) learn(docs); return cap1(s); };   /* money.js, the day book */
   API.gstNet = gstNet;   /* user test 2026-11-06: GST ledgers one by one in the trial balance, net on the balance sheet */   /* capital and loans (finrep.js) */
   API.tbDetail = tbDetail; API.stockOff = stockOff; API.tbGroups = tbGroups; API.tbGroupOf = tbGroupOf; API.tbTotals = tbTotals; API.TBG = TBG; API.prevYear = prevYear;   /* trial balance styles (finrep.js) */
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else G.NSPL = API;

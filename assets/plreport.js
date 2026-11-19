@@ -65,7 +65,7 @@
     if (r.k === 'gst') return t(r.dr ? 'pl.l_gstin' : 'pl.l_gstout');
     if (r.k === 'res-earlier') return t(r.cr ? 'pl.l_earlierp' : 'pl.l_earlierl');
     if (r.k === 'opening') return t('fx.l_opening');
-    return LBL[r.k] ? t('pl.l_' + LBL[r.k]) : r.name;
+    return LBL[r.k] && !(r.k === 'bank' && r.name !== 'Bank') ? t('pl.l_' + LBL[r.k]) : r.name;
   }
   function amt(r) { return CRH[r.g] ? r2(r.cr - r.dr) : r2(r.dr - r.cr); }
 
@@ -84,7 +84,7 @@
     var warn = '';
     if (!ok) warn += '<p class="sb-note bad">' + esc(t('pl.w_diff', { x: money(Math.abs(F.tb.diff)), s: t(F.tb.diff > 0 ? 'pl.dr' : 'pl.cr') })) + '</p>';
     var typedCash = W.typed.some(function (r) { return r.g === 'cash'; });
-    if (!typedCash) C.rows.forEach(function (r) { if ((r.k === 'cash' || r.k === 'bank') && r.cr) warn += '<p class="sb-note bad">' + esc(t('pl.w_neg', { a: nm(r) })) + '</p>'; });
+    if (!typedCash) C.rows.forEach(function (r) { if ((r.k === 'cash' || /^bank(:|$)/.test(r.k)) && r.cr) warn += '<p class="sb-note bad">' + esc(t('pl.w_neg', { a: nm(r) })) + '</p>'; });
     if (W.src === 'books' && !C.rows.some(function (r) { return r.g === 'rev'; })) warn += '<p class="sb-note">' + esc(t('pl.w_nosales')) + '</p>';
     if (W.src === 'books' && cur !== 'bs') warn += '<p class="hint">' + esc(t('uf.pfpl')) + '</p>';   /* why the App's Profit report can show another figure */
     var body = withPY(cur === 'bs' ? bsHtml(C) : cur === 'tb' ? tbHtml(C) : plHtml(C), C);
@@ -312,7 +312,7 @@
   }
   function reopen(d) {
     W = { src: d.src || 'books', typed: d.typed || [], os: d.os == null ? null : d.os, cs: d.cs == null ? null : d.cs, heads: d.heads || {}, saveId: d.id };
-    try { localStorage.setItem('ns-' + SITE + '-period', JSON.stringify({ from: d.from, to: d.to })); } catch (e) {}
+    if (NS.periodSet) NS.periodSet(d.from, d.to); else try { localStorage.setItem('ns-' + SITE + '-period', JSON.stringify({ from: d.from, to: d.to })); } catch (e) {}
     keepDraft(); location.hash = '';
     route();
   }
@@ -327,11 +327,11 @@
     $$('[data-rm]', pane).forEach(function (b) { b.addEventListener('click', function () { W.typed.splice(+b.getAttribute('data-rm'), 1); keepDraft(); show(); }); });
     $$('[data-move]', pane).forEach(function (s) { s.addEventListener('change', function () { W.heads[s.getAttribute('data-move')] = s.value; keepDraft(); show(); }); });
     var sv = $('[data-save]', pane); if (sv) sv.addEventListener('click', save);
-    var rs = $('[data-reset]', pane); if (rs) rs.addEventListener('click', function () { if (confirm(t('pl.resetc'))) { W = { src: W.src, typed: [], os: null, cs: null, heads: {}, saveId: '' }; keepDraft(); show(); } });
+    var rs = $('[data-reset]', pane); if (rs) rs.addEventListener('click', function () { if (NS.okSync(t('pl.resetc'))) { W = { src: W.src, typed: [], os: null, cs: null, heads: {}, saveId: '' }; keepDraft(); show(); } });
     $$('[data-open]', pane).forEach(function (b) { b.addEventListener('click', function () { var d = byId(b.getAttribute('data-open')); if (d) reopen(d); }); });
     $$('[data-del]', pane).forEach(function (b) { b.addEventListener('click', function () {
       var d = byId(b.getAttribute('data-del'));
-      if (d && confirm(t('sb.cdel', { x: t('pl.one') + ' ' + NS.fmtDate(d.to) }))) NSStore.del('doc', d.id).then(function () { if (W.saveId === d.id) W.saveId = ''; NS.toast(t('sb.deleted')); show(); });
+      if (d && NS.okSync(t('sb.cdel', { x: t('pl.one') + ' ' + NS.fmtDate(d.to) }))) NSStore.del('doc', d.id).then(function () { if (W.saveId === d.id) W.saveId = ''; NS.toast(t('sb.deleted')); show(); });
     }); });
     var pr = $('[data-print]', pane), pdf = $('[data-pdf]', pane), cv = $('[data-csv]', pane);
     if (pr) pr.addEventListener('click', NSB.printSheet);
