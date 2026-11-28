@@ -1,0 +1,45 @@
+/* final accounts from a trial balance file (tbfiles.js, profit-loss.) */
+.tbf{margin:18px auto 26px;padding:16px 18px;border:1px solid var(--line);border-radius:14px;background:var(--card,var(--bg));min-width:0}
+.tbf h2{margin-top:0}
+.tbf-steps{margin:8px 0 12px;padding-inline-start:1.3em}
+.tbf-steps li{margin:3px 0}
+.tbf-drops{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.tbf-drop{display:flex;flex-direction:column;gap:4px;padding:16px;border:2px dashed var(--line);border-radius:12px;cursor:pointer;min-height:92px;justify-content:center;text-align:center}
+.tbf-drop:hover,.tbf-drop:focus-visible,.tbf-drop.on{border-color:var(--accent,#0E746A);background:color-mix(in srgb,var(--accent,#0E746A) 7%,transparent)}
+.tbf-drop input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.tbf-drop .tbf-fn{font-weight:600;font-size:.86rem;overflow-wrap:anywhere}
+.tbf-row{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.tbf-files{margin:6px 0;padding-inline-start:1.2em}
+.tbf-files li{margin:4px 0;overflow-wrap:anywhere}
+.tbf .sb-note.ok{color:var(--ok,#167a3e);font-weight:600}
+.tbf .sb-note.bad,.tbf .bad{color:var(--bad)}
+.tbf-set .f{min-width:0}
+.tbf-set input,.tbf-set select{max-width:100%}
+.tbf-ask{margin:12px 0;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--amber,#d99a00) 10%,transparent)}
+.tbf-ask select{max-width:260px}
+.tbf-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.tbf-tabs [aria-selected=true],.tbf .tf-fmt [aria-pressed=true]{background:var(--accent,#0E746A);color:#fff;border-color:transparent}
+.tbf .tf-fmt{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.tbf-st th.nt,.tbf-st td.nt{text-align:center;width:3.2em;color:var(--soft)}
+.tbf-st tr.sec th{background:color-mix(in srgb,var(--line) 40%,transparent);font-weight:700}
+.tbf-st tr.b th,.tbf-st tr.b td{font-weight:700}
+.tbf-st tr.tot th,.tbf-st tr.tot td{font-weight:700;border-top:2px solid var(--ink,currentColor)}
+.tbf-st tr.bad th,.tbf-st tr.bad td{color:var(--bad)}
+.tbf-st th.sub{padding-inline-start:1.4em;font-weight:400}
+.tbf-notes h4,.tbf-body h4{margin:16px 0 4px}
+.tbf .tbl td.n,.tbf .tbl th.n{white-space:nowrap}
+.tbf-print{display:none}
+.tbf-dlg .fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+.tbf-dlg .f{display:flex;flex-direction:column;gap:3px}
+@media (max-width:620px){.tbf{padding:12px}.tbf-ask select{max-width:100%}}
+@media print{
+  html.tbf-printing #plreport,html.tbf-printing .sb-print{display:none!important}
+  html:not(.tbf-printing) .tbf-print{display:none!important}
+  html.tbf-printing .tbf-print{display:block}
+  .stsheet .pb{break-after:page}
+  .stsheet h4{margin:10px 0 2px}
+}
+/* money tiles: one line, never split inside a figure */
+.tbf .tiles{grid-template-columns:repeat(auto-fill,minmax(min(200px,100%),1fr))}
+.tbf .tile b{white-space:nowrap;overflow-wrap:normal;font-size:clamp(1rem,1.9vw,1.35rem)}
+@media (max-width:620px){.tbf .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.tbf .tile b{font-size:clamp(.86rem,4vw,1.1rem)}}
